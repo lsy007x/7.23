@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLB 뷰어</title>
+  <!-- 로컬 번들 (오프라인 동작, three.js 포함) -->
+  <script type="module" src="./lib/model-viewer.min.js"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #e8e8e8;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 10px 16px;
+      background: #232323;
+      border-bottom: 1px solid #333;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header strong { font-weight: 600; }
+    header .hint { color: #999; font-size: 12px; }
+    model-viewer {
+      flex: 1;
+      width: 100%;
+      background-color: #2b2b2b;
+      --poster-color: transparent;
+    }
+    .bar {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+    button {
+      background: #333;
+      color: #e8e8e8;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover { background: #3d3d3d; }
+    #progress {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>GLB 뷰어</strong>
+    <span class="hint">드래그: 회전 · 스크롤: 확대/축소 · 우클릭 드래그: 이동</span>
+    <div class="bar">
+      <button id="wireframe" type="button">배경 전환</button>
+      <button id="reset" type="button">시점 초기화</button>
+    </div>
+  </header>
+
+  <model-viewer
+    id="mv"
+    src="./model.glb"
+    alt="3D 모델"
+    camera-controls
+    touch-action="pan-y"
+    interaction-prompt="none"
+    shadow-intensity="1"
+    exposure="1"
+    environment-image="neutral"
+    auto-rotate
+    auto-rotate-delay="3000">
+    <div id="progress" slot="progress-bar">불러오는 중…</div>
+  </model-viewer>
+
+  <script>
+    const mv = document.getElementById('mv');
+    const progress = document.getElementById('progress');
+
+    mv.addEventListener('progress', (e) => {
+      const pct = Math.round(e.detail.totalProgress * 100);
+      progress.textContent = pct < 100 ? `불러오는 중… ${pct}%` : '';
+    });
+    mv.addEventListener('load', () => { progress.textContent = ''; });
+    mv.addEventListener('error', (e) => {
+      progress.textContent = '모델을 불러오지 못했습니다.';
+      console.error(e);
+    });
+
+    document.getElementById('reset').addEventListener('click', () => {
+      mv.cameraOrbit = '0deg 75deg auto';
+      mv.cameraTarget = 'auto auto auto';
+      mv.fieldOfView = 'auto';
+    });
+
+    const bgs = ['#2b2b2b', '#ffffff', '#000000', '#4a5568'];
+    let bgi = 0;
+    document.getElementById('wireframe').addEventListener('click', () => {
+      bgi = (bgi + 1) % bgs.length;
+      mv.style.backgroundColor = bgs[bgi];
+    });
+  </script>
+</body>
+</html>
