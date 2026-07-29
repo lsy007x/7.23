@@ -147,6 +147,26 @@
   .infopanel .body{color:var(--muted);font-size:14.5px}
   .infopanel .link{color:var(--dim);font-size:12.5px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 
+  /* 2-2 유산 상세 */
+  .herhero{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:22px}
+  .herhero .ph{height:300px;background-size:cover;background-position:center}
+  .herhero .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,22,25,.15),rgba(20,22,25,.9))}
+  .herhero .txt{position:absolute;left:0;right:0;bottom:0;padding:26px 28px}
+  .herhero .badge{display:inline-block;background:rgba(216,168,56,.18);color:var(--gold);font-size:11.5px;font-weight:800;letter-spacing:1px;padding:4px 11px;border-radius:6px;margin-bottom:10px}
+  .herhero h3{font-size:clamp(22px,3.4vw,32px);font-weight:800}
+  .herhero .hanja{color:var(--muted);font-size:14px;margin-top:4px}
+  .herhero .addr{color:var(--dim);font-size:13px;margin-top:6px}
+  .herfacts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+  @media(max-width:760px){.herfacts{grid-template-columns:1fr 1fr}}
+  .herfacts .f{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .herfacts .f b{display:block;color:var(--gold);font-size:18px;font-weight:800}
+  .herfacts .f span{color:var(--dim);font-size:12px}
+  .hersec{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:18px}
+  .hersec .no{color:var(--teal);font-weight:800;font-size:13px;letter-spacing:1px;margin-bottom:8px}
+  .hersec h4{font-size:18px;font-weight:800;margin-bottom:10px}
+  .hersec p{color:var(--muted);font-size:15px;line-height:1.85}
+  .hernav{display:flex;justify-content:flex-end;margin-top:22px}
+
   /* 2-3 타임라인 */
   .timeline{position:relative;margin-top:20px;padding-left:8px}
   .timeline::before{content:"";position:absolute;left:20px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--gold),var(--teal))}
@@ -211,6 +231,7 @@
   <div class="brand" data-go="cover">반구천의 암각화<span class="sfx"> · <b>바위의 기억</b></span></div>
   <button class="navlink" data-go="cover">표지</button>
   <button class="navlink" data-go="map">유산 지도</button>
+  <button class="navlink" data-go="heritage">유산 소개</button>
   <button class="navlink" data-go="motifs">문양 탐색</button>
   <button class="navlink" data-go="timeline">세계유산 등재</button>
   <button class="navlink" data-go="science">보존과학</button>
@@ -276,7 +297,21 @@
  </div>
 </section>
 
-<!-- 2-2 문양 -->
+<!-- 2-2 유산 상세 -->
+<section id="heritage" class="view">
+ <div class="wrap" id="heritageWrap">
+  <span class="eyebrow">2-2 · 유산 소개</span>
+  <h2 class="sec">유산을 선택해 자세히 살펴보세요</h2>
+  <p class="lead">아래에서 두 국보 중 하나를 고르면 상세 설명이 표시됩니다.</p>
+  <div class="toggle" id="herToggle">
+    <button class="on" data-site="daegok">대곡리 반구대 암각화</button>
+    <button data-site="cheonjeon">천전리 명문과 암각화</button>
+  </div>
+  <div id="herBody"></div>
+ </div>
+</section>
+
+<!-- 2-3 문양 -->
 <section id="motifs" class="view">
  <div class="wrap">
   <span class="eyebrow">2-2 · 암각화 문양 인터랙티브</span>
@@ -416,6 +451,35 @@ const SITES={
     desc:"상부의 선사시대 기하문양(마름모·동심원·나선)과 세선각 그림, 하부의 신라 법흥왕·갈문왕 일행 명문까지, 수천 년의 기록이 한 바위에 중첩된 ‘기록의 바위’."}
 };
 
+/* ===== 유산 상세 (국가유산청 자료 기반) ===== */
+const HERITAGE={
+ daegok:{badge:"국보 · 지정 1995.06.23",title:"울주 대곡리 반구대 암각화",hanja:"蔚州 大谷里 盤龜臺 岩刻畵",
+  addr:"울산광역시 울주군 언양읍 대곡리 991-3",photo:"./assets/photo_daegok.jpg",
+  facts:[["8m × 4.5m","중심 암면 규모"],["약 312점","새겨진 그림"],["20여 종","구분되는 동물"],["최소 7종","고래의 종류"]],
+  desc:"대곡리 반구대 암각화는 태화강 상류의 지류인 대곡천의 수직 절벽에 위치한다. 너비 약 8m, 높이 약 4.5m 규모의 중심 암면과 10곳의 주변 암면에 312점 정도의 그림이 새겨져 있다. 고래 같은 바다동물과 호랑이·사슴 같은 육지동물, 동물 사냥과 고래잡이 과정 등 선사시대 사냥과 해양 어로의 모습을 고스란히 담고 있다. 특히 동물 그림은 생태적 특징을 매우 상세하게 표현하고 있어 고래·거북·바다사자·새·상어·물고기·사슴·멧돼지·호랑이·표범·담비·늑대 등 약 20여 종의 동물을 구분할 수 있다. 고래는 분기(噴氣) 형태, 머리와 입 모양, 몸통 형태, 지느러미 등의 특징으로 북방긴수염고래·혹등고래·귀신고래·향고래·들쇠고래·범고래·상괭이 최소 7종이 확인된다. 암면 상단부는 2~3m 처마처럼 튀어나와 자연 바위그늘을 만들어 암각화를 보호하며, 북서향이라 3~11월 오후 3~5시 햇빛이 들면 그림이 더욱 뚜렷하고 입체적으로 보인다.",
+  found:"1970년 12월 24일, 울주 지역 불교 유적을 조사하던 동국대학교 박물관 조사단이 원효대사가 머물렀다는 반고사(盤皐寺) 터를 찾기 위해 반구대를 방문했다. 이때 마을 주민의 제보로 천전리 각석을 확인하면서, 우리나라에서 처음으로 암각화가 학계에 알려졌다. 이듬해 1971년 12월 25일, 반구대에서 대곡천을 따라 하류 약 0.7km 지점에서 대곡리 반구대 암각화가 추가로 확인·조사되었다."},
+ cheonjeon:{badge:"국보 · 지정 1973.05.04",title:"울주 천전리 명문과 암각화",hanja:"蔚州 川前里 銘文과 巖刻畵",
+  addr:"울산광역시 울주군 두동면 천전리 산210-2",photo:"./assets/photo_cheonjeon.jpg",
+  facts:[["9.8m × 2.7m","중심 암면 규모"],["약 625점","그림과 문자"],["127점","신라 시대 문자"],["신석기~신라","누적된 시대"]],
+  desc:"천전리 명문과 암각화는 반구대에서 상류 쪽 수직 절벽에 위치한다. 너비 약 9.8m, 높이 약 2.7m 규모의 중심 암면과 4곳의 주변 암면에 625점 정도의 그림과 문자가 새겨져 있다. 중심 암면은 상단이 약 25°가량 앞으로 기울어져 자연 바위그늘이 비바람으로부터 암각화를 보호한다. 좌측에는 신석기 시대 그림이, 상부에는 청동기 시대에 단단한 돌로 새긴 추상 그림이, 하부에는 신라 시대에 금속 도구로 새긴 세선각 그림과 문자가 남아 있다. 수천 년에 걸쳐 서로 다른 시대의 사람들이 앞 시대의 작품을 인지하며 그림과 문자를 누적해 새긴 결과 현재의 구도를 갖추게 되었다. 신라 시대 문자는 총 127점이 확인되며 한자(漢字)로 기록되었는데, 언제·누가·왜 이곳에 왔는지를 주로 담았다. 특히 신라 법흥왕 대의 명문이 있어 고대사 연구의 중요한 자료로 평가된다.",
+  found:"천전리 명문과 암각화는 1970년, 우리나라에서 처음으로 알려진 선사시대 암각화다. 동국대학교 박물관 조사단이 3년 계획으로 불적 조사(1968~1970)를 하던 중 마을 주민의 제보로 1970년 12월 24일 천전리 명문과 암각화를 확인했다. 그로부터 1년 뒤인 1971년 12월 25일에 대곡리 반구대 암각화도 확인되었다."}
+};
+function loadHeritage(site){
+  document.querySelectorAll('#herToggle button').forEach(b=>b.classList.toggle('on',b.dataset.site===site));
+  const h=HERITAGE[site];
+  document.getElementById('herBody').innerHTML=`
+    <div class="herhero"><div class="ph" style="background-image:url(${h.photo})"></div><div class="ov"></div>
+      <div class="txt"><span class="badge">${h.badge}</span><h3>${h.title}</h3>
+      <div class="hanja">${h.hanja}</div><div class="addr">📍 ${h.addr}</div></div></div>
+    <div class="herfacts">${h.facts.map(f=>`<div class="f"><b>${f[0]}</b><span>${f[1]}</span></div>`).join('')}</div>
+    <div class="hersec"><div class="no">01 · 유산 설명</div><p>${h.desc}</p></div>
+    <div class="hersec"><div class="no">02 · 발견 경위</div><p>${h.found}</p></div>
+    <div class="hernav"><button class="btn" data-motif="${site}">문양 알아보기 →</button></div>`;
+  document.querySelector('#herBody [data-motif]').addEventListener('click',e=>{go('motifs');loadSite(e.target.dataset.motif);});
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('#herToggle button').forEach(b=>b.addEventListener('click',()=>loadHeritage(b.dataset.site)));
+
 /* ===== 문양 데이터 (실제 자료 기반) ===== */
 // cat색상: sea=바다동물, land=육지동물, human=인물·도구 / fig,abs,fine,text=천전리
 const CATCOLOR={sea:"#3a6091",land:"#b06a3a",human:"#d8a838",fig:"#3a6091",abs:"#8a6fb0",fine:"#d88a3a",text:"#5aa06a"};
@@ -494,7 +558,7 @@ const SPOTS={
 const TABS={daegok:[["all","전체"],["sea","바다동물"],["land","육지동물"],["human","인물·도구"]],
   cheonjeon:[["all","전체"],["fig","구상그림"],["abs","추상·기하문"],["fine","세선각"],["text","신라 명문"]]};
 const DRAW={daegok:{img:"./assets/drawing_daegok.jpg",bg:"#f4f1ea",cap:"울주 대곡리 반구대 암각화 실측 도면 · 도면 위 ● 표시나 아래 문양을 누르세요"},
-  cheonjeon:{img:"./assets/drawing_cheonjeon.jpg",bg:"#14120f",cap:"울주 천전리 명문과 암각화 3D 스캔 · 색상 트레이싱 · 도면 위 ● 표시나 아래 문양을 누르세요"}};
+  cheonjeon:{img:"./assets/drawing_cheonjeon.jpg",bg:"#f4f1ea",cap:"울주 천전리 명문과 암각화 실측 선화 · 도면 위 ● 표시나 아래 문양을 누르세요"}};
 
 /* ===== 타임라인 ===== */
 const TIMELINE=[
@@ -519,8 +583,8 @@ document.querySelectorAll('.pin').forEach(pin=>pin.addEventListener('click',()=>
     `<div class="photo" style="background-image:url(${s.photo})"></div>
      <div class="pad"><span class="badge">${s.badge}</span><h3>${s.title}</h3>
      <div class="meta">${s.meta}</div><div class="desc">${s.desc}</div>
-     <button class="btn" style="margin-top:auto" data-detail="${pin.dataset.site}">이 유산의 문양 탐색하기 →</button></div>`;
-  document.querySelector('#mapInfo [data-detail]').addEventListener('click',e=>{go('motifs');loadSite(e.target.dataset.detail);});
+     <button class="btn" style="margin-top:auto" data-detail="${pin.dataset.site}">유산 자세히 보기 →</button></div>`;
+  document.querySelector('#mapInfo [data-detail]').addEventListener('click',e=>{go('heritage');loadHeritage(e.target.dataset.detail);});
 }));
 
 /* ===== 문양 탐색 ===== */
@@ -602,6 +666,7 @@ TIMELINE.forEach((t,i)=>{const el=document.createElement('div');
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){gallery.classList.remove('focused');gallery.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));resetInfo();}});
 
 /* 초기화 */
+loadHeritage('daegok');
 loadSite('daegok');
 </script>
 </body>
