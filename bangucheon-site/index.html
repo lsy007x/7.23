@@ -97,6 +97,21 @@
   .drawwrap .cap{position:absolute;left:12px;bottom:10px;background:rgba(20,22,25,.72);color:#e7e2d6;
     font-size:11.5px;padding:5px 11px;border-radius:7px}
   .drawwrap.dim{filter:brightness(.6) grayscale(.2)}
+  .drawwrap .layer{position:absolute;inset:0;pointer-events:none}
+  .hotspot{position:absolute;width:20px;height:20px;transform:translate(-50%,-50%);border-radius:50%;
+    border:2px solid rgba(216,168,56,.95);background:rgba(216,168,56,.22);cursor:pointer;pointer-events:auto;
+    animation:hp 2.2s infinite}
+  @keyframes hp{0%{box-shadow:0 0 0 0 rgba(216,168,56,.55)}70%{box-shadow:0 0 0 11px rgba(216,168,56,0)}100%{box-shadow:0 0 0 0 rgba(216,168,56,0)}}
+  .hotspot:hover{background:rgba(216,168,56,.5)}
+  .hotspot.sel{background:var(--gold);border-color:#fff;animation:none}
+  .shade{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;z-index:1}
+  .shade.on{opacity:1}
+  .ring{position:absolute;width:78px;height:78px;transform:translate(-50%,-50%);border-radius:50%;
+    border:2.5px solid var(--gold);box-shadow:0 0 26px rgba(216,168,56,.85),inset 0 0 18px rgba(216,168,56,.45);
+    pointer-events:none;opacity:0;z-index:2}
+  .ring.on{opacity:1;animation:rpulse 1.7s infinite}
+  @keyframes rpulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.14)}}
+  .drawwrap .cap{z-index:3}
   .legend{display:flex;flex-wrap:wrap;gap:14px;margin:12px 2px 24px;font-size:12.5px;color:var(--muted)}
   .legend span{display:inline-flex;align-items:center;gap:6px}
   .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
@@ -276,7 +291,10 @@
 
   <div class="drawwrap" id="drawWrap">
     <img id="drawImg" src="./assets/drawing_daegok.jpg" alt="반구대 암각화 실측 도면">
-    <div class="cap" id="drawCap">울주 대곡리 반구대 암각화 실측 도면 · 색상은 문양 분류를 나타냅니다</div>
+    <div class="layer" id="hotspots"></div>
+    <div class="shade" id="shade"></div>
+    <div class="ring" id="ring"></div>
+    <div class="cap" id="drawCap">울주 대곡리 반구대 암각화 실측 도면 · 도면 위 <b style="color:var(--gold)">●</b> 표시나 아래 문양을 누르세요</div>
   </div>
   <div class="legend" id="legend"></div>
 
@@ -404,7 +422,7 @@ const CATCOLOR={sea:"#3a6091",land:"#b06a3a",human:"#d8a838",fig:"#3a6091",abs:"
 const CATNAME={sea:"바다동물",land:"육지동물",human:"인물·도구",fig:"구상그림",abs:"추상·기하문",fine:"세선각 그림",text:"신라 명문"};
 const LEGEND={
   daegok:[["바다동물","#26456b"],["육지동물","#a5502f"],["도구·인물","#111"],["동물미상","#555"],["미상","#aaa"]],
-  cheonjeon:[["바다·육지동물","#26456b"],["기하문","#7a4fa0"],["세선각 그림","#b03a3a"],["신라 문자","#2f8a4a"],["미상","#aaa"]]
+  cheonjeon:[["바다·육지동물","#7a5a3a"],["기하문","#8f74c0"],["세선각 그림","#c85a5a"],["신라 문자","#7a90c0"],["미상","#aaa"]]
 };
 
 const MOTIFS={
@@ -460,10 +478,23 @@ const MOTIFS={
   {id:"inscription",cat:"text",name:"신라 명문 (書石)",tech:"명문",desc:"오른쪽 원명(原銘)은 525년 사부지 갈문왕과 누이 어사추여랑이 골짜기를 찾아 ‘서석곡(書石谷)’이라 이름 붙인 기록이다. 왼쪽 추명(追銘)은 그들의 죽음을 애도하며 539년 지몰시혜비와 부걸지비, 아들 심맥부지(뒷날 진흥왕)가 함께 찾은 행차를 새긴 신라 왕실사의 1차 사료다."}
  ]
 };
+// 도면 위 좌표 [x%, y%] — 각 문양 분류가 도면에서 분포하는 대표 위치
+const SPOTS={
+ // 반구대 (바다동물=남색 영역, 육지동물=갈색 영역, 도구·인물=검정 영역)
+ right_whale:[30,14], gray_whale:[33,22], humpback:[31,52], sperm_whale:[24,45],
+ pilot_whale:[26,41], killer_whale:[21,50], finless:[28,57], turtle:[50,44], shark:[60,42],
+ deer:[72,46], marten:[82,52], boar:[15,42], bird:[63,44], tiger:[17,49], leopard:[78,63],
+ p_stick:[28,20], p_bow:[70,52], p_shaman:[27,64], p_body:[31,64], p_face:[33,10],
+ net:[25,22], weir:[27,25], boat:[73,70], harpoon_whale:[48,40], bow:[66,50],
+ // 천전리 (3D 스캔 도면 기준 근사 좌표)
+ cj_shark:[10,50], cj_pair_deer:[13,40], cj_pair_animal:[8,45], cj_hunt:[16,53],
+ c_rhombus:[45,22], c_circle:[40,30], c_concentric:[43,33], c_spiral:[51,28], c_wave:[33,38], c_unknown:[78,32],
+ f_proc2:[28,64], f_proc4:[35,68], f_dragon:[48,60], f_dressed:[85,44], inscription:[60,58]
+};
 const TABS={daegok:[["all","전체"],["sea","바다동물"],["land","육지동물"],["human","인물·도구"]],
   cheonjeon:[["all","전체"],["fig","구상그림"],["abs","추상·기하문"],["fine","세선각"],["text","신라 명문"]]};
-const DRAW={daegok:{img:"./assets/drawing_daegok.jpg",cap:"울주 대곡리 반구대 암각화 실측 도면 · 색상은 문양 분류를 나타냅니다"},
-  cheonjeon:{img:"./assets/drawing_cheonjeon.jpg",cap:"울주 천전리 명문과 암각화 실측 도면 · 상부 문양대"}};
+const DRAW={daegok:{img:"./assets/drawing_daegok.jpg",bg:"#f4f1ea",cap:"울주 대곡리 반구대 암각화 실측 도면 · 도면 위 ● 표시나 아래 문양을 누르세요"},
+  cheonjeon:{img:"./assets/drawing_cheonjeon.jpg",bg:"#14120f",cap:"울주 천전리 명문과 암각화 3D 스캔 · 색상 트레이싱 · 도면 위 ● 표시나 아래 문양을 누르세요"}};
 
 /* ===== 타임라인 ===== */
 const TIMELINE=[
@@ -496,12 +527,14 @@ document.querySelectorAll('.pin').forEach(pin=>pin.addEventListener('click',()=>
 let curSite='daegok', curTab='all';
 const gallery=document.getElementById('gallery'), mInfo=document.getElementById('mInfo'),
       drawWrap=document.getElementById('drawWrap'), drawImg=document.getElementById('drawImg'),
-      drawCap=document.getElementById('drawCap'), tabsEl=document.getElementById('tabs'), legendEl=document.getElementById('legend');
+      drawCap=document.getElementById('drawCap'), tabsEl=document.getElementById('tabs'), legendEl=document.getElementById('legend'),
+      hotspots=document.getElementById('hotspots'), shade=document.getElementById('shade'), ring=document.getElementById('ring');
 
 function loadSite(site){
   curSite=site; curTab='all';
   document.querySelectorAll('#siteToggle button').forEach(b=>b.classList.toggle('on',b.dataset.site===site));
   drawImg.src=DRAW[site].img; drawImg.alt=DRAW[site].cap; drawCap.textContent=DRAW[site].cap;
+  drawWrap.style.background=DRAW[site].bg;
   // 범례
   legendEl.innerHTML=LEGEND[site].map(([n,c])=>`<span><i style="background:${c}"></i>${n}</span>`).join('');
   // 탭
@@ -515,20 +548,35 @@ function renderGallery(){
   gallery.innerHTML=list.map(m=>
     `<div class="chip" data-id="${m.id}"><img src="./assets/m/${m.id}.png" alt="${m.name}"><span class="nm">${m.name}</span></div>`).join('');
   gallery.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>selectMotif(c.dataset.id)));
+  // 도면 위 핫스팟(●) 표시
+  hotspots.innerHTML=list.filter(m=>SPOTS[m.id]).map(m=>
+    `<div class="hotspot" data-id="${m.id}" title="${m.name}" style="left:${SPOTS[m.id][0]}%;top:${SPOTS[m.id][1]}%"></div>`).join('');
+  hotspots.querySelectorAll('.hotspot').forEach(h=>h.addEventListener('click',()=>selectMotif(h.dataset.id)));
 }
 function setTab(tab){curTab=tab;
   tabsEl.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===tab));
   renderGallery(); resetInfo();
 }
 function resetInfo(){
-  drawWrap.classList.remove('dim');
-  mInfo.innerHTML=`<div class="ph">아래 문양을 클릭하세요.<br><br>선택한 문양만 <b style="color:var(--gold)">금빛으로 빛나고</b><br>그 문양의 설명만 이곳에 표시됩니다.</div>`;
+  drawWrap.classList.remove('dim'); shade.classList.remove('on'); ring.classList.remove('on');
+  hotspots.querySelectorAll('.hotspot').forEach(h=>h.classList.remove('sel'));
+  mInfo.innerHTML=`<div class="ph">도면 위 <b style="color:var(--gold)">●</b> 표시나 아래 문양을 클릭하세요.<br><br>선택하면 <b style="color:var(--gold)">도면의 해당 부분이 빛나고</b><br>그 문양의 설명만 이곳에 표시됩니다.</div>`;
 }
 function selectMotif(id){
   const m=MOTIFS[curSite].find(x=>x.id===id); if(!m)return;
   gallery.classList.add('focused');
   gallery.querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c.dataset.id===id));
-  drawWrap.classList.add('dim');
+  hotspots.querySelectorAll('.hotspot').forEach(h=>h.classList.toggle('sel',h.dataset.id===id));
+  // 도면 스포트라이트
+  const sp=SPOTS[id];
+  if(sp){
+    drawWrap.classList.remove('dim');
+    shade.style.background=`radial-gradient(circle at ${sp[0]}% ${sp[1]}%, rgba(0,0,0,0) 42px, rgba(10,9,8,.66) 82px)`;
+    shade.classList.add('on');
+    ring.style.left=sp[0]+'%'; ring.style.top=sp[1]+'%'; ring.classList.add('on');
+  }else{
+    drawWrap.classList.add('dim'); shade.classList.remove('on'); ring.classList.remove('on');
+  }
   const col=CATCOLOR[m.cat]||'#888';
   mInfo.innerHTML=`
     <div class="big"><img src="./assets/m/${m.id}.png" alt="${m.name}"></div>
@@ -539,7 +587,7 @@ function selectMotif(id){
       ${m.tech?`<span class="t tech">기법·분류 · ${m.tech}</span>`:''}
     </div>
     <div class="body">${m.desc}</div>
-    <div class="link">위 <b style="color:var(--muted)">실측 도면</b> 속에서 이 문양이 어떻게 배치되어 있는지 함께 살펴보세요. 도면의 색상 범례에서 <b style="color:${col}">${CATNAME[m.cat]}</b> 항목에 해당합니다.</div>`;
+    <div class="link">위 <b style="color:var(--muted)">실측 도면</b>에서 <b style="color:var(--gold)">빛나는 부분</b>이 이 문양(분류: <b style="color:${col}">${CATNAME[m.cat]}</b>)이 분포하는 대표 위치입니다.</div>`;
 }
 document.querySelectorAll('#siteToggle button').forEach(b=>b.addEventListener('click',()=>loadSite(b.dataset.site)));
 
@@ -551,7 +599,7 @@ TIMELINE.forEach((t,i)=>{const el=document.createElement('div');
   el.querySelector('.head').addEventListener('click',()=>el.classList.toggle('open'));tlWrap.appendChild(el);});
 
 /* ESC로 하이라이트 해제 */
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){resetInfo();gallery.classList.remove('focused');gallery.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){gallery.classList.remove('focused');gallery.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));resetInfo();}});
 
 /* 초기화 */
 loadSite('daegok');
