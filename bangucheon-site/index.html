@@ -166,6 +166,21 @@
   .hersec h4{font-size:18px;font-weight:800;margin-bottom:10px}
   .hersec p{color:var(--muted);font-size:15px;line-height:1.85}
   .hernav{display:flex;justify-content:flex-end;margin-top:22px}
+  /* 사진 갤러리 (공통) */
+  .pgal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:8px 0 22px}
+  .pgal figure{margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+  .pgal figure .im{height:158px;overflow:hidden}
+  .pgal img{width:100%;height:100%;object-fit:cover;transition:transform .45s}
+  .pgal figure:hover img{transform:scale(1.05)}
+  .pgal figcaption{padding:9px 12px;font-size:12px;color:var(--muted);line-height:1.4}
+  .galtitle{font-size:13px;font-weight:800;color:var(--gold);letter-spacing:.5px;margin:6px 0 10px}
+  .realref{display:flex;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 22px}
+  .realref img{width:190px;height:96px;object-fit:cover;border-radius:8px;flex-shrink:0}
+  .realref .t{font-size:13px;color:var(--muted);line-height:1.55}
+  .realref .t b{color:var(--text)}
+  @media(max-width:560px){.realref{flex-direction:column;align-items:flex-start}.realref img{width:100%;height:150px}}
+  .tl .thumb{width:100%;max-width:280px;height:150px;object-fit:cover;border-radius:10px;border:1px solid var(--line);margin-top:12px;display:block}
+  .outrophoto{width:100%;height:280px;object-fit:cover;border-radius:16px;border:1px solid var(--line);margin:10px 0 8px}
 
   /* 2-3 타임라인 */
   .timeline{position:relative;margin-top:20px;padding-left:8px}
@@ -179,7 +194,7 @@
   .tl .head .plus{margin-left:auto;color:var(--dim);font-size:20px;transition:.25s}
   .tl.open .head .plus{transform:rotate(45deg);color:var(--gold)}
   .tl .detail{max-height:0;overflow:hidden;transition:max-height .35s ease;color:var(--muted);font-size:14.5px}
-  .tl.open .detail{max-height:280px;margin-top:10px}
+  .tl.open .detail{max-height:520px;margin-top:10px}
   .crit{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:34px}
   @media(max-width:700px){.crit{grid-template-columns:1fr}}
   .crit .card b.bigb{color:var(--gold);font-size:15px}
@@ -333,6 +348,11 @@
   </div>
   <div class="legend" id="legend"></div>
 
+  <div class="realref">
+    <img src="./assets/photo_relief_animal.jpg" alt="반구대 암면 3D 스캔">
+    <div class="t"><b>왼쪽 선화는 실제 이렇게 새겨진 바위입니다.</b> 반구대 암면을 3D로 스캔하면, 쪼기·갈기로 새긴 문양이 바위 표면에 얕은 부조로 드러납니다. 도면의 색은 이 새김을 분류·정리한 것입니다.</div>
+  </div>
+
   <div class="tabs" id="tabs"></div>
 
   <div class="explore">
@@ -372,6 +392,13 @@
        방해석이 물과 반응해 표면에 박리층(비늘)을 만들고 선각을 지워갑니다. 보존과학은 이 바위를 어떻게 진단하고,
        무엇으로 지켜내고 있을까요.</p>
   </div>
+  <div class="galtitle">📷 물에 잠기는 국보 — 침수와 풍화의 현장</div>
+  <div class="pgal">
+    <figure><div class="im"><img src="./assets/photo_submerged.jpg" alt="침수된 반구대 암면" loading="lazy"></div><figcaption>사연댐 담수로 물에 잠긴 반구대 암면 — 매년 최대 8개월간 침수된다</figcaption></figure>
+    <figure><div class="im"><img src="./assets/photo_waterline.jpg" alt="수위선 진단" loading="lazy"></div><figcaption>수위 변동으로 드러나는 침수 구간(붉은 표시)과 물때 흔적</figcaption></figure>
+    <figure><div class="im"><img src="./assets/photo_relief_tex.jpg" alt="풍화 표면 3D 스캔" loading="lazy"></div><figcaption>3D 스캔에 나타난 표면 균열과 박리 — 풍화의 진행 흔적</figcaption></figure>
+  </div>
+
   <div class="scicards">
     <div class="scicard"><div class="no">01 · 진단</div><h3>지질 구성과 풍화 메커니즘</h3>
       <ul><li>사암·실트스톤·사질 셰일의 퇴적암 암반</li>
@@ -422,6 +449,7 @@
       오늘 우리가 이 유산을 과학으로 지키고 알리는 노력 그 자체가, 미래 세대에게 남기는 21세기의
       <b style="color:var(--gold)">‘명문(銘文)’</b>이 됩니다.</p>
   </div>
+  <img class="outrophoto" src="./assets/photo_cliff.jpg" alt="반구천의 암각화 암면" loading="lazy">
   <div class="vals">
     <div class="val"><div class="ic">🐋</div><h3>선사인의 바다</h3>
       <p>고래의 종(種)까지 구분되는 관찰력. 세계에서 가장 오래된 고래 사냥 기록이 인류 해양 문화의 원형을 증언한다.</p></div>
@@ -457,12 +485,19 @@ const HERITAGE={
   addr:"울산광역시 울주군 언양읍 대곡리 991-3",photo:"./assets/photo_daegok.jpg",
   facts:[["8m × 4.5m","중심 암면 규모"],["약 312점","새겨진 그림"],["20여 종","구분되는 동물"],["최소 7종","고래의 종류"]],
   desc:"대곡리 반구대 암각화는 태화강 상류의 지류인 대곡천의 수직 절벽에 위치한다. 너비 약 8m, 높이 약 4.5m 규모의 중심 암면과 10곳의 주변 암면에 312점 정도의 그림이 새겨져 있다. 고래 같은 바다동물과 호랑이·사슴 같은 육지동물, 동물 사냥과 고래잡이 과정 등 선사시대 사냥과 해양 어로의 모습을 고스란히 담고 있다. 특히 동물 그림은 생태적 특징을 매우 상세하게 표현하고 있어 고래·거북·바다사자·새·상어·물고기·사슴·멧돼지·호랑이·표범·담비·늑대 등 약 20여 종의 동물을 구분할 수 있다. 고래는 분기(噴氣) 형태, 머리와 입 모양, 몸통 형태, 지느러미 등의 특징으로 북방긴수염고래·혹등고래·귀신고래·향고래·들쇠고래·범고래·상괭이 최소 7종이 확인된다. 암면 상단부는 2~3m 처마처럼 튀어나와 자연 바위그늘을 만들어 암각화를 보호하며, 북서향이라 3~11월 오후 3~5시 햇빛이 들면 그림이 더욱 뚜렷하고 입체적으로 보인다.",
-  found:"1970년 12월 24일, 울주 지역 불교 유적을 조사하던 동국대학교 박물관 조사단이 원효대사가 머물렀다는 반고사(盤皐寺) 터를 찾기 위해 반구대를 방문했다. 이때 마을 주민의 제보로 천전리 각석을 확인하면서, 우리나라에서 처음으로 암각화가 학계에 알려졌다. 이듬해 1971년 12월 25일, 반구대에서 대곡천을 따라 하류 약 0.7km 지점에서 대곡리 반구대 암각화가 추가로 확인·조사되었다."},
+  found:"1970년 12월 24일, 울주 지역 불교 유적을 조사하던 동국대학교 박물관 조사단이 원효대사가 머물렀다는 반고사(盤皐寺) 터를 찾기 위해 반구대를 방문했다. 이때 마을 주민의 제보로 천전리 각석을 확인하면서, 우리나라에서 처음으로 암각화가 학계에 알려졌다. 이듬해 1971년 12월 25일, 반구대에서 대곡천을 따라 하류 약 0.7km 지점에서 대곡리 반구대 암각화가 추가로 확인·조사되었다.",
+  gallery:[["./assets/photo_valley.jpg","반구천 일원의 계곡 전경 — 산과 물길이 어우러진 명승"],
+    ["./assets/photo_daegok_slab.jpg","‘ㄱ’자로 꺾인 반구대 암면과 대곡천"],
+    ["./assets/photo_daegok.jpg","그림이 집중된 중심 암면 근경"],
+    ["./assets/photo_relief_animal.jpg","3D 스캔 — 바위에 실제로 새겨진 동물 문양"]]},
  cheonjeon:{badge:"국보 · 지정 1973.05.04",title:"울주 천전리 명문과 암각화",hanja:"蔚州 川前里 銘文과 巖刻畵",
   addr:"울산광역시 울주군 두동면 천전리 산210-2",photo:"./assets/photo_cheonjeon.jpg",
   facts:[["9.8m × 2.7m","중심 암면 규모"],["약 625점","그림과 문자"],["127점","신라 시대 문자"],["신석기~신라","누적된 시대"]],
   desc:"천전리 명문과 암각화는 반구대에서 상류 쪽 수직 절벽에 위치한다. 너비 약 9.8m, 높이 약 2.7m 규모의 중심 암면과 4곳의 주변 암면에 625점 정도의 그림과 문자가 새겨져 있다. 중심 암면은 상단이 약 25°가량 앞으로 기울어져 자연 바위그늘이 비바람으로부터 암각화를 보호한다. 좌측에는 신석기 시대 그림이, 상부에는 청동기 시대에 단단한 돌로 새긴 추상 그림이, 하부에는 신라 시대에 금속 도구로 새긴 세선각 그림과 문자가 남아 있다. 수천 년에 걸쳐 서로 다른 시대의 사람들이 앞 시대의 작품을 인지하며 그림과 문자를 누적해 새긴 결과 현재의 구도를 갖추게 되었다. 신라 시대 문자는 총 127점이 확인되며 한자(漢字)로 기록되었는데, 언제·누가·왜 이곳에 왔는지를 주로 담았다. 특히 신라 법흥왕 대의 명문이 있어 고대사 연구의 중요한 자료로 평가된다.",
-  found:"천전리 명문과 암각화는 1970년, 우리나라에서 처음으로 알려진 선사시대 암각화다. 동국대학교 박물관 조사단이 3년 계획으로 불적 조사(1968~1970)를 하던 중 마을 주민의 제보로 1970년 12월 24일 천전리 명문과 암각화를 확인했다. 그로부터 1년 뒤인 1971년 12월 25일에 대곡리 반구대 암각화도 확인되었다."}
+  found:"천전리 명문과 암각화는 1970년, 우리나라에서 처음으로 알려진 선사시대 암각화다. 동국대학교 박물관 조사단이 3년 계획으로 불적 조사(1968~1970)를 하던 중 마을 주민의 제보로 1970년 12월 24일 천전리 명문과 암각화를 확인했다. 그로부터 1년 뒤인 1971년 12월 25일에 대곡리 반구대 암각화도 확인되었다.",
+  gallery:[["./assets/photo_cheonjeon.jpg","천전리 명문과 암각화 중심 암면"],
+    ["./assets/photo_cheonjeon_site.jpg","각석 전경과 보호 시설"],
+    ["./assets/photo_cheonjeon_scan.jpg","3D 스캔으로 기록한 각석 전체"]]}
 };
 function loadHeritage(site){
   document.querySelectorAll('#herToggle button').forEach(b=>b.classList.toggle('on',b.dataset.site===site));
@@ -474,6 +509,8 @@ function loadHeritage(site){
     <div class="herfacts">${h.facts.map(f=>`<div class="f"><b>${f[0]}</b><span>${f[1]}</span></div>`).join('')}</div>
     <div class="hersec"><div class="no">01 · 유산 설명</div><p>${h.desc}</p></div>
     <div class="hersec"><div class="no">02 · 발견 경위</div><p>${h.found}</p></div>
+    <div class="galtitle">📷 유산 사진</div>
+    <div class="pgal">${h.gallery.map(g=>`<figure><div class="im"><img src="${g[0]}" alt="${g[1]}" loading="lazy"></div><figcaption>${g[1]}</figcaption></figure>`).join('')}</div>
     <div class="hernav"><button class="btn" data-motif="${site}">문양 알아보기 →</button></div>`;
   document.querySelector('#herBody [data-motif]').addEventListener('click',e=>{go('motifs');loadSite(e.target.dataset.motif);});
   window.scrollTo(0,0);
@@ -562,11 +599,11 @@ const DRAW={daegok:{img:"./assets/drawing_daegok.jpg",bg:"#f4f1ea",cap:"울주 �
 
 /* ===== 타임라인 ===== */
 const TIMELINE=[
-  {yr:"1965 – 70년대",tt:"물속에 잠긴 걸작",d:"울산 공업·생활용수 공급을 위한 사연댐 건설(1965)로 반구대 암각화는 매년 침수되기 시작한다. 1971년 학계가 대곡리 반구대 암각화를, 이어 천전리 각석을 잇따라 발견·보고하며 그 가치가 세상에 알려진다."},
-  {yr:"2010",tt:"유네스코 잠정목록 등재",d:"‘대곡천 암각화군’이 유네스코 세계유산 잠정목록(Tentative List)에 이름을 올리며 등재를 향한 공식 여정이 시작된다."},
-  {yr:"2023. 1",tt:"세계유산 등재 신청서 제출",d:"명칭과 범위를 ‘반구천의 암각화(Petroglyphs along the Bangucheon Stream)’로 구체화하여 정식 신청서를 제출. 반구천 일원 약 3km의 명승 구간을 단일 유산으로 묶는다."},
-  {yr:"2025. 5",tt:"ICOMOS ‘등재 권고’",d:"세계유산 자문기구 ICOMOS(국제기념물유적협의회)가 현지 실사와 심사를 거쳐 ‘등재 권고(Inscribe)’ 판정을 내리며 최종 등재에 청신호가 켜진다."},
-  {yr:"2025. 7. 12",tt:"유네스코 세계유산 최종 등재",d:"프랑스 파리 제47차 세계유산위원회에서 ‘반구천의 암각화’가 세계유산 목록에 최종 등재된다. 대한민국의 17번째, 그리고 가장 오래된 세계유산이다."}
+  {yr:"1965 – 70년대",tt:"물속에 잠긴 걸작",img:"./assets/photo_submerged.jpg",d:"울산 공업·생활용수 공급을 위한 사연댐 건설(1965)로 반구대 암각화는 매년 침수되기 시작한다. 1971년 학계가 대곡리 반구대 암각화를, 이어 천전리 각석을 잇따라 발견·보고하며 그 가치가 세상에 알려진다."},
+  {yr:"2010",tt:"유네스코 잠정목록 등재",img:"./assets/photo_daegok_wide.jpg",d:"‘대곡천 암각화군’이 유네스코 세계유산 잠정목록(Tentative List)에 이름을 올리며 등재를 향한 공식 여정이 시작된다."},
+  {yr:"2023. 1",tt:"세계유산 등재 신청서 제출",img:"./assets/photo_daegok.jpg",d:"명칭과 범위를 ‘반구천의 암각화(Petroglyphs along the Bangucheon Stream)’로 구체화하여 정식 신청서를 제출. 반구천 일원 약 3km의 명승 구간을 단일 유산으로 묶는다."},
+  {yr:"2025. 5",tt:"ICOMOS ‘등재 권고’",img:"./assets/photo_relief_animal.jpg",d:"세계유산 자문기구 ICOMOS(국제기념물유적협의회)가 현지 실사와 심사를 거쳐 ‘등재 권고(Inscribe)’ 판정을 내리며 최종 등재에 청신호가 켜진다."},
+  {yr:"2025. 7. 12",tt:"유네스코 세계유산 최종 등재",img:"./assets/photo_valley.jpg",d:"프랑스 파리 제47차 세계유산위원회에서 ‘반구천의 암각화’가 세계유산 목록에 최종 등재된다. 대한민국의 17번째, 그리고 가장 오래된 세계유산이다."}
 ];
 
 /* ===== 뷰 전환 ===== */
@@ -659,7 +696,7 @@ document.querySelectorAll('#siteToggle button').forEach(b=>b.addEventListener('c
 const tlWrap=document.getElementById('tlWrap');
 TIMELINE.forEach((t,i)=>{const el=document.createElement('div');
   el.className='tl'+(i===TIMELINE.length-1?' open':'');
-  el.innerHTML=`<div class="node"></div><div class="head"><span class="yr">${t.yr}</span><span class="tt">${t.tt}</span><span class="plus">+</span></div><div class="detail">${t.d}</div>`;
+  el.innerHTML=`<div class="node"></div><div class="head"><span class="yr">${t.yr}</span><span class="tt">${t.tt}</span><span class="plus">+</span></div><div class="detail">${t.d}${t.img?`<img class="thumb" src="${t.img}" alt="${t.tt}" loading="lazy">`:''}</div>`;
   el.querySelector('.head').addEventListener('click',()=>el.classList.toggle('open'));tlWrap.appendChild(el);});
 
 /* ESC로 하이라이트 해제 */
