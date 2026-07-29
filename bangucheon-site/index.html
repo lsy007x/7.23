@@ -146,6 +146,10 @@
   .t.cat{color:#1a1d21} .t.tech{background:rgba(255,255,255,.08);color:var(--muted)}
   .infopanel .body{color:var(--muted);font-size:14.5px}
   .infopanel .link{color:var(--dim);font-size:12.5px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .infopanel .realphoto{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .infopanel .realphoto img{width:100%;border-radius:10px;border:1px solid var(--line);background:#efe9dc}
+  .infopanel .realphoto .cap{font-size:12px;color:var(--gold);font-weight:700;margin:8px 0 2px}
+  .infopanel .realphoto .sub{font-size:11.5px;color:var(--dim)}
 
   /* 2-2 유산 상세 */
   .herhero{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);margin-bottom:22px}
@@ -179,6 +183,9 @@
   .realref .t{font-size:13px;color:var(--muted);line-height:1.55}
   .realref .t b{color:var(--text)}
   @media(max-width:560px){.realref{flex-direction:column;align-items:flex-start}.realref img{width:100%;height:150px}}
+  .realrock{margin:0 0 24px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+  .realrock img{width:100%;max-height:360px;object-fit:cover;display:block}
+  .realrock .cap{padding:13px 16px;font-size:13.5px;color:var(--muted);line-height:1.6}
   .tl .thumb{width:100%;max-width:280px;height:150px;object-fit:cover;border-radius:10px;border:1px solid var(--line);margin-top:12px;display:block}
   .outrophoto{width:100%;height:280px;object-fit:cover;border-radius:16px;border:1px solid var(--line);margin:10px 0 8px}
 
@@ -348,10 +355,7 @@
   </div>
   <div class="legend" id="legend"></div>
 
-  <div class="realref">
-    <img src="./assets/photo_relief_animal.jpg" alt="반구대 암면 3D 스캔">
-    <div class="t"><b>왼쪽 선화는 실제 이렇게 새겨진 바위입니다.</b> 반구대 암면을 3D로 스캔하면, 쪼기·갈기로 새긴 문양이 바위 표면에 얕은 부조로 드러납니다. 도면의 색은 이 새김을 분류·정리한 것입니다.</div>
-  </div>
+  <div class="realrock" id="realRock"></div>
 
   <div class="tabs" id="tabs"></div>
 
@@ -606,6 +610,20 @@ const SPOTS={
  c_rhombus:[27,32], c_circle:[42,28], c_concentric:[40,38], c_spiral:[50,30], c_wave:[33,44], c_unknown:[70,30],
  f_proc2:[25,68], f_proc4:[33,72], f_dragon:[48,64], f_dressed:[82,46], inscription:[52,68]
 };
+// 실제 탁본·사진 연계 (교육자료 실물 이미지) [이미지, 캡션]
+const REAL={
+ tiger:["./assets/real_tiger.jpg","‘호랑이와 표범’ 탁본"],
+ leopard:["./assets/real_tiger.jpg","‘호랑이와 표범’ 탁본"],
+ boar:["./assets/real_boar.jpg","‘멧돼지’ 탁본"],
+ deer:["./assets/real_deer.jpg","‘사슴을 사냥하는 모습’ 탁본"],
+ right_whale:["./assets/real_whales.jpg","고래·거북·그물이 함께 새겨진 탁본"],
+ humpback:["./assets/real_whales.jpg","고래·거북·그물이 함께 새겨진 탁본"],
+ gray_whale:["./assets/real_whales.jpg","‘새끼를 업은 고래’가 포함된 탁본"],
+ turtle:["./assets/real_whales.jpg","‘거북’이 함께 새겨진 탁본"],
+ net:["./assets/real_whales.jpg","‘사냥에 사용된 그물’이 새겨진 탁본"],
+ weir:["./assets/real_whales.jpg","‘올타리(어살)’가 새겨진 탁본"],
+ harpoon_whale:["./assets/real_whales.jpg","‘작살에 맞은 고래’가 포함된 탁본"]
+};
 const TABS={daegok:[["all","전체"],["sea","바다동물"],["land","육지동물"],["human","인물·도구"]],
   cheonjeon:[["all","전체"],["fig","구상그림"],["abs","추상·기하문"],["fine","세선각"],["text","신라 명문"]]};
 const DRAW={daegok:{img:"./assets/drawing_daegok.jpg",bg:"#f4f1ea",cap:"울주 대곡리 반구대 암각화 실측 도면 · 도면 위 ● 표시나 아래 문양을 누르세요"},
@@ -650,6 +668,11 @@ function loadSite(site){
   document.querySelectorAll('#siteToggle button').forEach(b=>b.classList.toggle('on',b.dataset.site===site));
   drawImg.src=DRAW[site].img; drawImg.alt=DRAW[site].cap; drawCap.textContent=DRAW[site].cap;
   drawWrap.style.background=DRAW[site].bg;
+  document.getElementById('realRock').innerHTML = site==='daegok'
+    ? `<img src="./assets/photo_rock_outlined.jpg" alt="반구대 암면 실제 사진">
+       <div class="cap"><b style="color:var(--text)">위 선화는 이 실제 바위를 옮긴 것입니다.</b> 울주 대곡리 반구대 암면 사진 — 윤곽선 안에 고래 무리·사슴 등이 새겨져 있습니다. 아래에서 문양을 클릭하면, 그 문양의 <b style="color:var(--gold)">실제 탁본 사진</b>도 함께 표시됩니다.</div>`
+    : `<img src="./assets/photo_cheonjeon.jpg" alt="천전리 각석 실제 사진">
+       <div class="cap"><b style="color:var(--text)">위 선화는 이 실제 각석을 옮긴 것입니다.</b> 울주 천전리 명문과 암각화 — 상부의 기하문양·동물부터 하부의 신라 명문까지 한 바위에 새겨져 있습니다.</div>`;
   // 범례
   legendEl.innerHTML=LEGEND[site].map(([n,c])=>`<span><i style="background:${c}"></i>${n}</span>`).join('');
   // 탭
@@ -702,7 +725,8 @@ function selectMotif(id){
       ${m.tech?`<span class="t tech">기법·분류 · ${m.tech}</span>`:''}
     </div>
     <div class="body">${m.desc}</div>
-    <div class="link">위 <b style="color:var(--muted)">실측 도면</b>에서 <b style="color:var(--gold)">빛나는 부분</b>이 이 문양(분류: <b style="color:${col}">${CATNAME[m.cat]}</b>)이 분포하는 대표 위치입니다.</div>`;
+    <div class="link">위 <b style="color:var(--muted)">실측 도면</b>에서 <b style="color:var(--gold)">빛나는 부분</b>이 이 문양(분류: <b style="color:${col}">${CATNAME[m.cat]}</b>)이 분포하는 대표 위치입니다.</div>
+    ${REAL[id]?`<div class="realphoto"><img src="${REAL[id][0]}" alt="실제 탁본"><div class="cap">📷 실제 새김 — ${REAL[id][1]}</div><div class="sub">실제 암각화를 옮긴 탁본 이미지입니다.</div></div>`:''}`;
 }
 document.querySelectorAll('#siteToggle button').forEach(b=>b.addEventListener('click',()=>loadSite(b.dataset.site)));
 
