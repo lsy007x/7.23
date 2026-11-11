@@ -12,6 +12,80 @@ def load():
     code = 'import("./public/js/figures.js").then(m=>console.log(JSON.stringify(m.FIGURES)))'
     return json.loads(subprocess.check_output(["node", "-e", code]))
 
+
+def _runs(v):
+    out, st = [], None
+    for k, b in enumerate(v):
+        if b and st is None: st = k
+        if not b and st is not None: out.append((st, k - 1)); st = None
+    if st is not None: out.append((st, len(v) - 1))
+    return out
+
+def finalize(m, s):
+    """괄호 마스크 → 깨끗한 윤곽 path.
+    직선 괄호(세로선 + 끝 가로획)는 인쇄 망점 잡티를 지우고 선 위치·굵기·가로획을 측정해 막대로 다시 만든다.
+    곡선 괄호({ } 모양)는 가우시안으로 매끈하게 한 뒤 윤곽을 딴다."""
+    H, W = m.shape
+    ys, xs = np.where(m)
+    if len(xs) == 0: return ""
+    y0, y1 = ys.min(), ys.max()
+    xc = int(np.bincount(xs).argmax())               # 가장 진한 세로 열 = 괄호 세로선
+    widths, ticks = [], []
+    for y in range(y0, y1 + 1):
+        row = m[y]
+        if not row[xc]:
+            # 세로선이 끊긴 행: 가까운 열에서 찾는다
+            near = [x for x in range(max(0, xc - 3), min(W, xc + 4)) if row[x]]
+            if not near: continue
+            xi = near[0]
+        else: xi = xc
+        l = r = xi
+        while l > 0 and row[l - 1]: l -= 1
+        while r < W - 1 and row[r + 1]: r += 1
+        widths.append((y, l, r))
+    if not widths: return ""
+    wb = float(np.median([r - l + 1 for _, l, r in widths]))
+    wide = [(y, l, r) for y, l, r in widths if (r - l + 1) > 3 * wb + 4 * s]
+    # 가로획 묶음
+    spans, cur = [], []
+    for y, l, r in wide:
+        if cur and y - cur[-1][0] > 2: spans.append(cur); cur = []
+        cur.append((y, l, r))
+    if cur: spans.append(cur)
+    # 선 위치를 직선으로 맞춘다(원본 괄호선이 약간 기울어진 도면이 있다). 곡선({ })이면 잔차가 크다.
+    wide_y = {y for y, _, _ in wide}
+    pts = [(y, (l + r) / 2) for y, l, r in widths if y not in wide_y]
+    a_fit = b_fit = 0.0; res = 0.0
+    if len(pts) >= 5:
+        yy = np.array([p[0] for p in pts], float); cc = np.array([p[1] for p in pts], float)
+        a_fit, b_fit = np.polyfit(yy, cc, 1); res = float(np.abs(cc - (a_fit * yy + b_fit)).max())
+    is_bar = wb <= 7 * s and len(spans) <= 4 and len(pts) >= 5 and res <= 2.5 * wb + 1.5 * s
+    out = np.zeros_like(m, dtype=np.uint8)
+    if is_bar:
+        half = max(1.0, wb / 2)
+        quad = np.array([[a_fit * y0 + b_fit - half, y0], [a_fit * y0 + b_fit + half, y0],
+                         [a_fit * y1 + b_fit + half, y1], [a_fit * y1 + b_fit - half, y1]], np.float32)
+        cv2.fillPoly(out, [np.round(quad).astype(np.int32)], 1)
+        for sp in spans:
+            ya, yb = sp[0][0], sp[-1][0]
+            xa, xb = min(l for _, l, _ in sp), max(r for _, _, r in sp)
+            out[ya:yb + 1, xa:xb + 1] = 1
+        # 막대로 그렸을 때 원본 잉크가 많이 남으면 곡선 괄호다
+        grown = cv2.dilate(out, np.ones((int(2 * s) + 1, int(2 * s) + 1), np.uint8))
+        leftover = float((m.astype(bool) & ~grown.astype(bool)).sum()) / max(1, int(m.sum()))
+        if DEBUG: print(f"    막대 판정 잉크 잔여 {leftover:.3f}")
+        if leftover > 0.02:
+            is_bar = False
+    if not is_bar:
+        f = cv2.GaussianBlur(m.astype(np.float32), (0, 0), max(1.0, 0.9 * s))
+        out = (f > 0.45).astype(np.uint8)
+    cs, _ = cv2.findContours(out, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    d = ""
+    for c in cs:
+        ap = cv2.approxPolyDP(c, 0.8 if is_bar else 1.0, True).reshape(-1, 2) / s
+        if len(ap) >= 3: d += "M" + "L".join(f"{px:.1f} {py:.1f}" for px, py in ap) + "Z"
+    return d
+
 def bracket_for(gray, s, box, W):
     x, y, w, h = box
     ink = (gray < 150).astype(np.uint8)
@@ -34,14 +108,7 @@ def bracket_for(gray, s, box, W):
     if best is None:
         return None
     m = (lab == best[1]).astype(np.uint8)
-    cs, _ = cv2.findContours(m, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-    d = ""
-    for c in cs:
-        if cv2.contourArea(c) < 4 and len(c) < 8:
-            continue
-        ap = cv2.approxPolyDP(c, 1.0, True).reshape(-1, 2) / s
-        d += "M" + "L".join(f"{px:.0f} {py:.0f}" for px, py in ap) + "Z"
-    return d
+    return finalize(m, s)
 
 # 하나의 긴 괄호를 여러 이름이 구간으로 나눠 쓰는 도면(괄호 가지의 y 위치를 도면에서 읽은 값)
 SLICES = {
@@ -52,6 +119,7 @@ SLICES = {
 }
 
 # 괄호를 만들지 않는 이름(괄호가 본체 그림과 붙어 있어 정확히 떼어낼 수 없는 것)
+DEBUG = False
 SKIP = {"pagoda": {16, 17}}
 
 def slice_path(gray, s, box, y0, y1, W, x0=None, x1=None):
@@ -72,12 +140,7 @@ def slice_path(gray, s, box, y0, y1, W, x0=None, x1=None):
     m[:max(0, int(y0 * s))] = 0; m[int(y1 * s):] = 0
     if x0 is not None: m[:, :max(0, int(x0 * s))] = 0
     if x1 is not None: m[:, int(x1 * s):] = 0
-    cs, _ = cv2.findContours(m, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-    d = ""
-    for c in cs:
-        ap = cv2.approxPolyDP(c, 1.0, True).reshape(-1, 2) / s
-        if len(ap) >= 3: d += "M" + "L".join(f"{px:.0f} {py:.0f}" for px, py in ap) + "Z"
-    return d or None
+    return finalize(m, s) or None
 
 def main():
     figs = load()
