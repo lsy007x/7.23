@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { TERMS, TERM_BY_ID } from "./public/js/data.js";
-import { retrieve, formatContext } from "./public/js/rag.js";
+import { answerQuestion } from "./tutor.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(here, "public");
@@ -83,34 +83,14 @@ async function handleTag(body) {
   return [200, { scene: out.scene, tags, unlisted: out.unlisted }];
 }
 
-// ───────── RAG 튜터 ─────────
-const TUTOR_SYSTEM = `당신은 한국 전통 건축 용어 튜터입니다. 학부생의 질문에 한국어로 답합니다.
-
-반드시 지킬 것:
-- <context> 안의 <doc> 내용만 근거로 답합니다. 일반 지식으로 빈칸을 채우지 않습니다.
-- 문장마다 근거가 된 문서를 [id] 형태로 표시합니다. 예: 고주는 종보 한쪽 끝을 받는다 [gooju].
-- 문맥에 답이 없거나 일부만 있으면, 확인된 부분만 답하고 "제공된 용어집에서는 확인되지 않습니다"라고 분명히 말합니다.
-- 용어집에 없는 용어(오탈자·비표준 표기 포함)를 묻는 경우 비슷한 표준 용어를 안내하되 단정하지 않습니다.
-- 답변은 3~8문장, 필요하면 짧은 목록을 씁니다. 구조 질문은 아래에서 위로(기둥→보→도리) 순서로 설명합니다.`;
-
+// ───────── RAG 튜터 (tutor.mjs: 초안 → 근거 검증 → 인용 검사) ─────────
 async function handleAsk(body) {
-  const question = String(body.question || "").slice(0, 1000).trim();
-  if (!question) return [400, { error: "질문이 비어 있습니다." }];
-  const docs = retrieve(question);
-  const sources = docs.map((d) => ({ id: d.id, name: d.name, source: d.source }));
-  if (!docs.length) {
-    return [200, { answer: "제공된 용어집에서 관련 용어를 찾지 못했습니다. 용어 이름을 넣어 다시 질문해 주세요.", sources }];
+  try {
+    return [200, await answerQuestion(client, body.question, { ...COMMON, verify: process.env.TAMSAEK_VERIFY !== "0" })];
+  } catch (e) {
+    if (e.status === 400 || e.status === 422 || e.status === 502) return [e.status, { error: e.message }];
+    throw e;
   }
-  const res = await client.beta.messages.create({
-    ...COMMON,
-    max_tokens: 4000,
-    system: TUTOR_SYSTEM,
-    output_config: { effort: "medium" },
-    messages: [{ role: "user", content: `<context>\n${formatContext(docs)}\n</context>\n\n질문: ${question}` }],
-  });
-  if (res.stop_reason === "refusal") return [422, { error: "이 질문에는 답할 수 없습니다." }];
-  const answer = res.content.filter((b) => b.type === "text").map((b) => b.text).join("");
-  return [200, { answer, sources }];
 }
 
 // ───────── HTTP ─────────

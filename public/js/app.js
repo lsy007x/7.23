@@ -4,10 +4,12 @@ import { renderDiagram, highlight, idsInDiagram } from "./diagrams.js";
 import { renderFigure, mountFigure, figureTermIds } from "./figview.js";
 import { IDS_3D } from "./model3d.js";
 import { FIGURES } from "./figures.js";
+import { STRUCTURES, STRUCT_BY_KEY, DEFAULT_STRUCT, termIdOf } from "./structures.js";
 
 const view = document.getElementById("view");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 let cleanup = null; // 페이지 이탈 시 정리 (3D 렌더러 등)
+const ARROW = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>`;
 
 // ─────────────────── 공통 조각 ───────────────────
 function searchBox(id, placeholder = "용어를 입력하세요 (예: 고주, 보주)") {
@@ -53,7 +55,9 @@ for (const c of CATEGORIES) for (const s of c.subs) {
 function diagramRoute(t) {
   return ROUTES[t.id] ? `${ROUTES[t.id]}?sel=${t.id}` : null;
 }
-// 국가유산 디지털(digital.khs.go.kr). 검색 주소 형식을 확인하지 못해 첫 화면으로 보내고, 용어를 복사해 붙여넣게 한다.
+// 실제 사진: 구글 이미지 검색
+const photoUrl = (t) => `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${t.name.replace(/\(.+\)$/, "")} ${t.hanja || ""} ${catName(t.cat)}`.trim())}`;
+// 국가유산 디지털 서비스(digital.khs.go.kr). 검색 주소 형식을 확인하지 못해 첫 화면으로 보내고, 용어를 복사해 붙여넣게 한다.
 const PHOTO_SITE = "https://digital.khs.go.kr/";
 const searchWord = (t) => t.name.replace(/\(.+\)$/, "");
 let toastTimer;
@@ -80,14 +84,14 @@ function detailHTML(t, { showMapLink = true } = {}) {
     ${rel.length ? `<div class="section-title">관련 용어</div><div class="chips">${rel.map((r) => `<a class="chip" href="#/t/${r.id}" data-pick="${r.id}">${esc(r.name)}</a>`).join("")}</div>` : ""}
     <div class="actions">
       ${map ? `<a class="btn primary" href="${map}">도면·3D에서 위치 보기</a>` : ""}
-      <a class="btn" href="${PHOTO_SITE}" target="_blank" rel="noopener" data-photo="${esc(searchWord(t))}">실제 사진 보기 ↗</a>
+      <a class="btn" href="${photoUrl(t)}" target="_blank" rel="noopener">실제 사진 보기 ↗</a>
       <a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${t.name}에 대해 설명해줘`)}">AI 튜터에게 묻기</a>
     </div>
+    <a class="khs-link" href="${PHOTO_SITE}" target="_blank" rel="noopener" data-photo="${esc(searchWord(t))}"><span><b>국가유산 디지털 서비스</b><small>공식 사진·도면·3D 자료 (용어가 복사돼요)</small></span><i class="go">${ARROW}</i></a>
     <p class="meta">${esc(catName(t.cat))} › ${esc(subName(t.cat, t.sub))} · 출처: ${esc(t.source)}</p>`;
 }
 
 // ─────────────────── 페이지 ───────────────────
-const ARROW = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>`;
 function pageHome() {
   view.innerHTML = `<section class="home">
     <header class="hero">
@@ -139,6 +143,14 @@ async function pageDiagram(catId, subId, sel) {
   const subTerms = TERMS.filter((t) => t.cat === catId && t.sub === subId);
   const figLabel = (k) => FIGURES[k].title.match(/\((.+)\)/)?.[1] ?? FIGURES[k].title;
 
+  const STRUCT_OF_TERM = Object.fromEntries(STRUCTURES.map((st) => [termIdOf(st), st.key]));
+  const structCard = () => `<section class="struct" id="struct">
+      <h2>전통 건축 구조 <small>량가</small></h2>
+      <p class="struct-lead">지붕을 받치는 뼈대(가구)는 도리의 수와 고주의 위치에 따라 달라져요. 구조를 고르면 위의 3D 모델이 바뀌어요.</p>
+      <div class="struct-pills" id="structPills" role="tablist" aria-label="구조 선택">${STRUCTURES.map((st) => `<button type="button" role="tab" data-struct="${st.key}">${esc(st.label)}</button>`).join("")}</div>
+      <div class="struct-body" id="structBody" aria-live="polite"></div>
+    </section>`;
+
   let figureHTML = "";
   if (is3D) figureHTML = `<div class="stage" id="stage"><div class="loading" id="loading"><span><span class="spinner"></span><br/>3D 모델 불러오는 중…</span></div>
           <div class="tools"><button type="button" id="front">정면 보기</button><button type="button" id="roof">지붕</button><button type="button" id="reset">해제</button></div></div>`;
@@ -152,6 +164,7 @@ async function pageDiagram(catId, subId, sel) {
   view.innerHTML = `${header(c.id, c.name)}
     <nav class="sub-grid">${c.subs.map((x) => `<a href="#/c/${c.id}/${x.id}" class="${x.id === subId ? "on" : ""}">${x.name}</a>`).join("")}</nav>
     ${hasFigure ? `<div class="figure${figs.length ? " figure-photo" : ""}" id="fig">${figureHTML}</div>
+      ${is3D ? structCard() : ""}
       <div class="selbar"><button type="button" class="btn-list" id="openList">용어 목록 <b id="listCount"></b></button><button type="button" class="btn-ghost" id="clearSel" hidden>선택 해제</button></div>`
       : termList(subTerms)}
     <article class="detail" id="detail" hidden aria-live="polite"></article>
@@ -164,6 +177,35 @@ async function pageDiagram(catId, subId, sel) {
   let selectFn = () => false;
   let currentId = null;
   let model3d = null;
+  let curStruct = STRUCT_OF_TERM[sel] ?? DEFAULT_STRUCT;
+  let refreshList = () => {};
+
+  // 구조 설명 칸
+  function showStruct(key) {
+    curStruct = key;
+    const st = STRUCT_BY_KEY[key];
+    view.querySelectorAll("#structPills button").forEach((b) => { const on = b.dataset.struct === key; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+    view.querySelector("#structBody").innerHTML = `<h3>${esc(st.label)}<span class="badge">도리 ${st.count}개</span></h3>
+      <dl class="facts"><div><dt>고주</dt><dd>${esc(st.goju)}</dd></div><div><dt>특징</dt><dd>${esc(st.summary)}</dd></div></dl>
+      <p>${esc(st.desc)}</p>
+      ${st.use && st.use !== "확인 필요" ? `<p class="use"><b>쓰임</b> ${esc(st.use)}</p>` : ""}
+      ${st.unsure ? `<p class="notice">참고 도식의 표시를 옮긴 것으로, 정확한 정의는 표준 용어집으로 확인이 필요해요.</p>` : ""}
+      <a class="btn" href="#/t/${termIdOf(st)}">용어 정의 보기</a>`;
+    view.querySelector(`#structPills [data-struct="${key}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
+  }
+  function setStruct(key) {
+    if (key === curStruct && model3d?.type() === key) return;
+    showStruct(key);
+    if (!model3d) return;
+    model3d.setType(key);
+    refreshList();
+    // 새 구조에 없는 부재를 선택 중이었다면 선택 해제
+    if (currentId && !model3d.ids().includes(currentId) && !["ryangga", "dori", "kan"].includes(currentId) && !STRUCT_OF_TERM[currentId]) choose(null);
+  }
+  if (is3D) {
+    showStruct(curStruct);
+    view.querySelector("#structPills").addEventListener("click", (e) => { const b = e.target.closest("[data-struct]"); if (b) setStruct(b.dataset.struct); });
+  }
 
   if (is3D) {
     const { mountModel } = await import("./model3d.js");
@@ -172,7 +214,7 @@ async function pageDiagram(catId, subId, sel) {
     try {
       const stage = view.querySelector("#stage");
       const roofBtn = view.querySelector("#roof");
-      const model = await mountModel(stage, { onPick: pick, names, onRoof: (on) => roofBtn.classList.toggle("on", on) });
+      const model = await mountModel(stage, { onPick: pick, names, onRoof: (on) => roofBtn.classList.toggle("on", on), type: curStruct });
       if (!stage.isConnected) return model.dispose(); // 로딩 중 다른 페이지로 이동한 경우
       model3d = model;
       view.querySelector("#loading")?.remove();
@@ -224,22 +266,26 @@ async function pageDiagram(catId, subId, sel) {
   cleanup = () => { document.body.classList.remove("no-scroll"); model3d?.dispose(); };
 
   // 이 도면(소주제)에 나오는 용어 목록. 사찰은 소주제별로 나눠 보여 준다
-  const listIds = (catId === "temple" ? subTerms.map((t) => t.id) : ids).filter((i) => TERM_BY_ID[i]);
-  const listTerms = [...new Set(listIds)].map((i) => TERM_BY_ID[i]).sort((a, b) => a.name.localeCompare(b.name, "ko"));
+  const buildListTerms = () => {
+    const base = is3D ? [...(model3d ? model3d.ids() : []), ...STRUCTURES.map(termIdOf), "ryangga"] : catId === "temple" ? subTerms.map((t) => t.id) : ids;
+    return [...new Set(base)].filter((i) => TERM_BY_ID[i]).map((i) => TERM_BY_ID[i]).sort((a, b) => a.name.localeCompare(b.name, "ko"));
+  };
+  let listTerms = buildListTerms();
   detail.addEventListener("click", (e) => {
     const a = e.target.closest("a[data-pick]");
-    if (a && listIds.includes(a.dataset.pick)) { e.preventDefault(); choose(a.dataset.pick, true); }
+    if (a && listTerms.some((t) => t.id === a.dataset.pick)) { e.preventDefault(); choose(a.dataset.pick, true); }
   });
 
   // 용어 목록 시트 (가나다 색인 + 도면 안 검색)
   if (hasFigure) {
-    view.querySelector("#listCount").textContent = listTerms.length;
+    const countEl = view.querySelector("#listCount");
+    countEl.textContent = listTerms.length;
     const sheet = document.createElement("div");
     sheet.className = "sheet"; sheet.hidden = true;
     sheet.innerHTML = `<div class="sheet-bg" data-close></div>
       <section class="sheet-panel" role="dialog" aria-modal="true" aria-label="용어 목록">
         <div class="sheet-grab" aria-hidden="true"></div>
-        <div class="sheet-head"><h2>용어 목록 <small>${listTerms.length}</small></h2><button type="button" data-close>닫기</button></div>
+        <div class="sheet-head"><h2>용어 목록 <small id="sheetCount">${listTerms.length}</small></h2><button type="button" data-close>닫기</button></div>
         <div class="sheet-search"><input id="sheetq" type="search" autocomplete="off" placeholder="이 도면에서 찾기" aria-label="이 도면에서 용어 찾기" /></div>
         <div class="sheet-list" id="sheetlist"></div>
       </section>`;
@@ -254,6 +300,7 @@ async function pageDiagram(catId, subId, sel) {
       listEl.innerHTML = Object.keys(groups).sort((a, b) => (a === "#") - (b === "#") || a.localeCompare(b, "ko")).map((g) =>
         `<h3 class="grp">${g}</h3>` + groups[g].map((t) => `<button type="button" class="row${t.id === currentId ? " on" : ""}" data-pick="${t.id}"><b>${esc(t.name)}</b><span>${esc(t.short)}</span></button>`).join("")).join("");
     };
+    refreshList = () => { listTerms = buildListTerms(); countEl.textContent = listTerms.length; sheet.querySelector("#sheetCount").textContent = listTerms.length; };
     const openSheet = () => { fillList(); sheet.querySelector("#sheetq").value = ""; sheet.hidden = false; document.body.classList.add("no-scroll"); };
     const closeSheet = () => { sheet.hidden = true; document.body.classList.remove("no-scroll"); };
     view.querySelector("#openList").onclick = openSheet;
@@ -271,6 +318,7 @@ async function pageDiagram(catId, subId, sel) {
 
   function choose(id, scroll = false) {
     const t = id && TERM_BY_ID[id];
+    if (is3D && t && STRUCT_OF_TERM[id]) setStruct(STRUCT_OF_TERM[id]); // 구조 용어를 고르면 그 구조의 모델로 바꾼다
     const shown = t ? selectFn(id) : selectFn(null);
     currentId = t ? id : null;
     view.querySelector("#clearSel")?.toggleAttribute("hidden", !currentId);
@@ -311,8 +359,8 @@ function pageTag() {
     <h1 class="page">사진·도면으로 용어 찾기</h1>
     <p class="lead">답사 사진(예: 봉정사 덕휘루, 궁궐 부재)이나 도면·보고서 캡처를 올리면 AI가 부재를 인식해 용어 태그를 붙입니다. 태그를 탭하면 정의와 도면 위치를 확인할 수 있습니다.</p>
     <div class="uploader">
-      <label>📷 사진 촬영<small>현장에서 바로</small><input type="file" accept="image/*" capture="environment" data-file /></label>
-      <label>🖼 앨범·캡처<small>사진 / 도면 / 보고서</small><input type="file" accept="image/*" data-file /></label>
+      <label>사진 촬영<small>현장에서 바로</small><input type="file" accept="image/*" capture="environment" data-file /></label>
+      <label>앨범·캡처<small>사진 / 도면 / 보고서</small><input type="file" accept="image/*" data-file /></label>
     </div>
     <div id="out"></div>
     <p class="notice">AI 판독은 보조 수단입니다. 신뢰도 ‘낮음’ 태그는 반드시 도면·문헌으로 다시 확인하세요.</p>`;
@@ -361,15 +409,21 @@ function renderAnswer(text) {
 }
 function msgHTML(m) {
   if (m.role === "user") return `<div class="msg user">${esc(m.text)}</div>`;
-  const srcs = m.sources?.length ? `<div class="srcs">근거 용어: ${m.sources.map((s) => `<a class="cite" href="#/t/${s.id}">${esc(s.name)}</a>`).join(" ")}<br/>출처: ${esc(m.sources[0].source)}</div>` : "";
-  return `<div class="msg bot">${m.html ?? renderAnswer(m.text)}${srcs}</div>`;
+  const cite = (x) => `<a class="cite" href="#/t/${x.id}">${esc(x.name)}</a>`;
+  let foot = "";
+  if (m.sources?.length) foot += `<div class="srcs">인용한 용어: ${m.sources.map(cite).join(" ")}<br/>출처: ${esc([...new Set(m.sources.map((x) => x.source))].join(" / "))}</div>`;
+  else if (m.checked !== undefined) foot += `<div class="srcs warn">인용된 근거가 없어요. 답을 그대로 믿지 말고 아래 관련 용어의 정의를 직접 확인해 주세요.</div>`;
+  if (m.notInGlossary?.length) foot += `<div class="srcs warn">용어집에서 확인되지 않은 부분: ${m.notInGlossary.map(esc).join(" · ")}</div>`;
+  if (m.related?.length) foot += `<div class="srcs">관련 용어: ${m.related.map(cite).join(" ")}</div>`;
+  if (m.checked) foot += `<div class="srcs ok">근거 검증 ${m.corrected ? "후 일부 수정됨" : "완료"}</div>`;
+  return `<div class="msg bot">${m.html ?? renderAnswer(m.text)}${foot}</div>`;
 }
 function pageTutor(prefill) {
   view.innerHTML = `${header(null, "AI 튜터")}
     <h1 class="page">AI 용어 튜터</h1>
-    <p class="lead">TAMSAEK-H 용어집에서 관련 항목을 먼저 찾고(RAG), 그 내용만 근거로 답합니다. 답변 속 용어를 탭하면 원문 정의로 이동합니다.</p>
+    <p class="lead">용어집에서 관련 항목을 먼저 찾고, 그 내용만 근거로 답한 뒤 한 번 더 근거를 검증해요. 답변 속 용어를 탭하면 원문 정의로 이동합니다.</p>
     <div class="chips" id="examples">
-      ${["1고주 5량가 구조에서 고주와 종보는 어떻게 연결돼?", "어칸과 협칸의 규모 차이 기준이 뭐야?", "석탑 상륜부를 아래부터 순서대로 알려줘", "주심포와 다포의 차이는?"].map((q) => `<button type="button" class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}
+      ${["1고주 5량가 구조에서 고주와 종보는 어떻게 연결돼?", "어칸과 협칸의 규모 차이 기준이 뭐야?", "5량가와 7량가는 뭐가 달라?", "석탑 상륜부를 아래부터 순서대로 알려줘", "주심포와 다포의 차이는?"].map((q) => `<button type="button" class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}
     </div>
     <div class="chat" id="chat">${chatLog.map(msgHTML).join("")}</div>
     <form class="composer" id="composer">
@@ -394,7 +448,7 @@ async function ask(q) {
     const r = await fetch("api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: q }) });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(data.error || `오류 ${r.status}`), { status: r.status });
-    m = { role: "bot", text: data.answer, sources: data.sources };
+    m = { role: "bot", text: data.answer, sources: data.sources, related: data.related, notInGlossary: data.notInGlossary, checked: data.checked, corrected: data.corrected };
   } catch (e) {
     // AI 서버가 없을 때: 검색된 용어집 원문을 그대로 보여 줌 (환각 없는 대체 답변)
     const docs = retrieve(q, 5);

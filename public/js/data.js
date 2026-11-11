@@ -16,7 +16,7 @@ export const CATEGORIES = [
     { id: "diag", name: "보존 진단" },
   ]},
   { id: "wood", name: "목조문화유산", subs: [
-    { id: "frame", name: "량가 구조 (3D)", diagram: "model3d" },
+    { id: "frame", name: "전통 건축 구조", diagram: "model3d" },
     { id: "jusimpo", name: "주심포", figs: ["geungnak1", "geungnak2"] },
     { id: "dapo", name: "다포", figs: ["daeung1", "daeung2"] },
     { id: "giwa", name: "지붕 · 기와", figs: ["giwa"] },
@@ -36,14 +36,16 @@ function t(id, name, hanja, cat, sub, short, desc, related = [], aliases = []) {
   return { id, name, hanja, cat, sub, short, desc, related, aliases, source: SOURCE_DRAFT };
 }
 
+import { STRUCTURES, STRUCT_SOURCE, termIdOf } from "./structures.js";
+
 const DOC_SRC = "부록 「석조·목조 문화재 부재 명칭」(사용자 제공)";
 const withSource = (source, term) => ({ ...term, source });
 
 export const TERMS = [
   // ───────── 석탑 ─────────
   t("sangryunbu", "상륜부", "相輪部", "stone", "pagoda", "탑 꼭대기의 장식 부분",
-    "석탑의 맨 윗부분으로 노반 위에 복발·앙화·보륜·보개·수연·보주를 차례로 올리고 찰주로 꿰어 고정한 부분이다. 인도 스투파의 산개(傘蓋)에서 유래한 것으로 본다.",
-    ["noban", "bokbal", "anghwa", "boryun", "bogae", "suyeon", "boju", "chalju"]),
+    "석탑의 맨 윗부분으로 노반 위에 복발·앙화·보륜·보개·수연·용차·보주를 차례로 올리고 찰주로 꿰어 고정한 부분이다. 인도 스투파의 산개(傘蓋)에서 유래한 것으로 본다.",
+    ["noban", "bokbal", "anghwa", "boryun", "bogae", "suyeon", "yongcha", "boju", "chalju"]),
   t("chalju", "찰주", "刹柱", "stone", "pagoda", "상륜부 부재를 꿰는 중심 기둥",
     "상륜부의 여러 부재 중심을 관통하여 세운 쇠 또는 돌 기둥. '찰간(刹竿)'이라고도 한다. 상륜 부재들이 흩어지지 않도록 잡아 주는 축 역할을 한다.",
     ["sangryunbu", "boju"], ["찰간"]),
@@ -51,7 +53,7 @@ export const TERMS = [
     "탑의 찰주 맨 끝에 달린 구슬 모양의 장식. 상륜부의 가장 꼭대기에 놓이며, 석등·부도의 꼭대기에도 쓰인다.",
     ["suyeon", "chalju", "sangryunbu"]),
   t("suyeon", "수연", "水煙", "stone", "pagoda", "보주 아래 불꽃 모양 장식",
-    "보개 위, 보주 아래에 놓이는 불꽃(화염) 모양의 장식판. 불을 막는다는 뜻에서 '물 연기'라는 이름이 붙었다.",
+    "보개 위, 용차 아래에 놓이는 불꽃(화염) 모양의 장식판. 불을 막는다는 뜻에서 '물 연기'라는 이름이 붙었다.",
     ["boju", "bogae"]),
   t("bogae", "보개", "寶蓋", "stone", "pagoda", "보륜 위의 지붕 모양 덮개",
     "보륜 위에 얹는 닫집(일산) 모양의 장식. 고귀한 존재를 덮는 일산(日傘)을 상징한다.",
@@ -205,17 +207,17 @@ export const TERMS = [
 
   // ───────── 목조: 도리·량가 ─────────
   t("ryangga", "량가", "梁架", "wood", "frame", "보와 도리로 짠 지붕 가구 구조",
-    "기둥 위에 보와 도리를 짜 올려 지붕을 받치는 뼈대(가구) 구조. 단면에서 도리의 개수로 3량가·5량가·7량가 등으로 구분한다. 예: 5량가 = 도리 5개(주심도리 2, 중도리 2, 종도리 1).",
-    ["ryang3", "ryang5", "il_goju_5ryang", "dori"], ["가구", "가구법", "가구구조"]),
+    "기둥 위에 보와 도리를 짜 올려 지붕을 받치는 뼈대(가구) 구조. 단면에서 도리의 개수로 3량가·5량가·7량가·9량가 등으로 구분하고, 고주를 두는 위치(1고주·2고주·심고주)에 따라 다시 나눈다. 예: 5량가 = 도리 5개(주심도리 2, 중도리 2, 종도리 1). 이 앱의 '전통 건축 구조' 화면에서 12가지 구조를 3D로 비교해 볼 수 있다.",
+    ["ryang3", "ryang5", "il_goju_5ryang", "st_chilryang", "st_guryang", "dori"], ["가구", "가구법", "가구구조"]),
   t("ryang3", "3량가", "三樑架", "wood", "frame", "도리 3개의 가구",
     "앞뒤 주심도리 2개와 종도리 1개, 모두 3개의 도리로 이루어진 가장 단순한 가구. 대들보 위에 대공을 세워 종도리를 받는다. 소규모 건물에 쓰인다.",
-    ["ryangga", "ryang5"]),
+    ["ryangga", "ryang5"], ["삼량", "삼량가"]),
   t("ryang5", "5량가", "五樑架", "wood", "frame", "도리 5개의 가구",
     "주심도리 2개, 중도리 2개, 종도리 1개로 이루어진 가구. 대들보-동자주-종보-대공 순으로 짜 올리는 것이 기본이며, 고주의 유무와 수에 따라 무고주 5량가, 1고주 5량가, 2고주 5량가로 나뉜다.",
-    ["ryangga", "il_goju_5ryang", "jungdori", "jongdori"]),
+    ["ryangga", "il_goju_5ryang", "jungdori", "jongdori"], ["오량", "오량가", "무고주 5량가"]),
   t("il_goju_5ryang", "1고주 5량가", "一高柱五樑架", "wood", "frame", "고주 1열을 둔 5량가",
     "건물 안쪽에 고주를 한 줄 세운 5량가. 평주와 고주 사이에는 퇴보를, 고주와 반대편 평주 사이에는 대들보를 건너지른다. 고주 머리가 한쪽 중도리와 종보 끝을 직접 받고, 종보 반대쪽 끝은 대들보 위 동자주가 받는다. 종보 가운데 대공이 종도리를 받는다.",
-    ["gooju", "toebo", "daedulbo", "jongbo", "dongjaju", "daegong", "ryang5"], ["일고주오량가", "1고주5량가"]),
+    ["gooju", "toebo", "daedulbo", "jongbo", "dongjaju", "daegong", "ryang5"], ["일고주오량", "일고주오량가", "1고주5량가"]),
   t("dori", "도리", "道里", "wood", "frame", "서까래를 받는 가로 부재",
     "기둥 위나 보 위에 건물 길이 방향으로 걸어 서까래를 받는 부재. 위치에 따라 주심도리·중도리·종도리로 부른다. 단면이 둥근 굴도리와 네모난 납도리가 있다.",
     ["jusimdori", "jungdori", "jongdori", "jangyeo"]),
@@ -608,6 +610,15 @@ TERMS.push({
   ...t("cheoma", "처마", "", "stone", "lantern", "옥개석 가장자리의 바깥으로 내민 부분", "지붕돌(옥개석)의 아랫부분 가장자리가 벽(화사석) 바깥으로 내민 부분. 석등 부재도에서는 옥개석 아랫단의 가장자리선을 가리킨다.", ["lt_okgae", "udong", "hwasaseok"]),
   source: "석등 부재도(사용자 제공 이미지) — 명칭은 도면, 설명은 편집 초안(검수 필요)",
 });
+
+// 전통 건축 구조(량가) 12종 중 아직 용어집에 없는 것과 중종보
+TERMS.push(
+  { ...t("jungjongbo", "중종보", "", "wood", "frame", "대들보와 종보 사이에 걸리는 보", "7량가 이상에서 대들보 위에 동자주를 세워 올리는 중간 보. 5량가에는 없고, 7량가에는 한 단, 9량가에는 두 단 놓인다. 정확한 정의는 표준 용어집으로 확인이 필요하다.", ["daedulbo", "jongbo", "dongjaju", "st_chilryang"]), source: STRUCT_SOURCE },
+  ...STRUCTURES.filter((st) => !st.termId).map((st) => ({
+    ...t(termIdOf(st), st.name, "", "wood", "frame", st.summary, `${st.desc}${st.use && st.use !== "확인 필요" ? ` ${st.use}` : ""}`, ["ryangga", "gooju", "daedulbo", ...(st.count >= 7 ? ["jungjongbo"] : []), "jongbo", "dongjaju", "daegong"], st.aliases ?? []),
+    source: STRUCT_SOURCE,
+  })),
+);
 
 export const TERM_BY_ID = Object.fromEntries(TERMS.map((x) => [x.id, x]));
 export const catName = (id) => CATEGORIES.find((c) => c.id === id)?.name ?? id;

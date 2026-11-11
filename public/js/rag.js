@@ -1,7 +1,13 @@
 // 용어 검색 + RAG 문맥 검색 (브라우저와 서버가 같은 코드를 사용)
 import { TERMS, TERM_BY_ID } from "./data.js";
 
-const norm = (s) => (s || "").toLowerCase().replace(/[\s·()\-]/g, "");
+// 한글 수사 표기를 숫자 표기로 맞춘다 (일고주오량 = 1고주 5량 = 1고주5량가). 질문과 용어 양쪽에 같이 적용.
+const NUMS = [["일고주", "1고주"], ["이고주", "2고주"], ["삼량", "3량"], ["오량", "5량"], ["칠량", "7량"], ["구량", "9량"]];
+export const norm = (s) => {
+  let n = (s || "").toLowerCase().replace(/[\s·()\-]/g, "");
+  for (const [k, v] of NUMS) n = n.split(k).join(v);
+  return n;
+};
 
 function bigrams(s) {
   const n = norm(s);
@@ -43,7 +49,7 @@ export function searchTerms(q, limit = 30) {
 }
 
 // RAG용: 질문에 직접 등장한 용어 + 그 관련 용어까지 문맥으로 확장
-export function retrieve(question, k = 8) {
+export function retrieve(question, k = 10) {
   const ranked = TERMS.map((t) => ({ t, s: score(t, question) }))
     .filter((x) => x.s >= 4)
     .sort((a, b) => b.s - a.s);
