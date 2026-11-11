@@ -1,0 +1,15 @@
+{
+  "name": "tamsaek-h",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TAMSAEK-H: 문화유산 전통 건축 용어 모바일 웹 (도면 하이라이트, 3D 매핑, AI 태깅, RAG 튜터)",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "zod": "^4.6.7"
+  }
+}
