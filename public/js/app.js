@@ -12,12 +12,30 @@ let cleanup = null; // 페이지 이탈 시 정리 (3D 렌더러 등)
 const ARROW = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>`;
 const ICON_SEARCH = `<svg class="ic-search" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>`;
 const CHEVRON = `<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`;
+const ICON_X = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>`;
+const HANJA = { stone: "石造文化遺産", wood: "木造文化遺産", buddha: "佛像", temple: "寺刹" };
+
+// 이 기기에만 남기는 기록(최근 본 용어·최근 검색). 저장이 막힌 환경에서는 조용히 건너뛴다.
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(`tamsaek.${k}`)) || []; } catch { return []; } },
+  push(k, v, max) { try { localStorage.setItem(`tamsaek.${k}`, JSON.stringify([v, ...this.get(k).filter((x) => x !== v)].slice(0, max))); } catch { /* 무시 */ } },
+  clear(k) { try { localStorage.removeItem(`tamsaek.${k}`); } catch { /* 무시 */ } },
+};
+const recentTerms = () => store.get("terms").map((id) => TERM_BY_ID[id]).filter(Boolean);
+// 검색어와 일치하는 부분을 표시한다
+function hl(text, q) {
+  const t = String(text ?? ""), n = (q || "").trim();
+  const i = n ? t.toLowerCase().indexOf(n.toLowerCase()) : -1;
+  return i < 0 ? esc(t) : `${esc(t.slice(0, i))}<mark>${esc(t.slice(i, i + n.length))}</mark>${esc(t.slice(i + n.length))}`;
+}
+const hanjaSpan = (t) => (t.hanja ? `<span class="h" lang="ko-Hani">${esc(t.hanja)}</span>` : "");
 
 // ─────────────────── 공통 조각 ───────────────────
 function searchBox(id, placeholder = "용어 검색 (예: 고주, 보주)") {
   return `<div class="search-wrap"><form class="search" role="search" data-search>
     <label for="${id}" class="sr-only">용어 검색</label>${ICON_SEARCH}
     <input id="${id}" type="search" enterkeyhint="search" autocomplete="off" placeholder="${placeholder}" />
+    <button type="button" class="clear" data-clear hidden aria-label="검색어 지우기">${ICON_X}</button>
   </form><ul class="suggest" data-suggest></ul></div>`;
 }
 function bindSearch(root) {
@@ -25,11 +43,21 @@ function bindSearch(root) {
   if (!form) return;
   const input = form.querySelector("input");
   const list = root.querySelector("[data-suggest]");
-  input.addEventListener("input", () => {
+  const clear = form.querySelector("[data-clear]");
+  const refresh = () => {
     const q = input.value.trim();
-    list.innerHTML = q ? searchTerms(q, 6).map((t) => `<li><a href="#/t/${t.id}"><b>${esc(t.name)}</b><small>${esc(t.short)}</small></a></li>`).join("") : "";
+    clear.hidden = !input.value;
+    list.innerHTML = q ? searchTerms(q, 6).map((t) => `<li><a href="#/t/${t.id}"><b>${hl(t.name, q)}${hanjaSpan(t)}</b><small>${esc(t.short)}</small></a></li>`).join("") : "";
+  };
+  input.addEventListener("input", refresh);
+  clear.addEventListener("click", () => { input.value = ""; refresh(); input.focus(); });
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (q) store.push("searches", q, 6);
+    location.hash = `#/s/${encodeURIComponent(q)}`;
   });
-  form.addEventListener("submit", (e) => { e.preventDefault(); location.hash = `#/s/${encodeURIComponent(input.value.trim())}`; });
+  root._refreshSearch = refresh;
 }
 function header(cat, here) {
   // 로고 줄과 검색창은 스크롤되면 올라가고, 대주제 탭만 화면 위에 붙는다
@@ -40,9 +68,9 @@ function header(cat, here) {
     </nav>
     <div class="page-search${here ? " has-here" : ""}">${here ? `<span class="here">${esc(here)}</span>` : ""}${searchBox("q-top")}</div>`;
 }
-function termList(terms) {
-  if (!terms.length) return `<p class="placeholder">해당하는 용어가 없습니다.</p>`;
-  return `<ul class="term-list">${terms.map((t) => `<li class="c-${t.cat}"><a href="#/t/${t.id}"><div><b>${esc(t.name)}</b>${t.hanja ? `<span class="h">${esc(t.hanja)}</span>` : ""}<p>${esc(t.short)}</p></div>${CHEVRON}</a></li>`).join("")}</ul>`;
+function termList(terms, q = "") {
+  if (!terms.length) return `<p class="placeholder">해당하는 용어가 없어요.</p>`;
+  return `<ul class="term-list">${terms.map((t) => `<li class="c-${t.cat}"><a href="#/t/${t.id}"><div><b>${hl(t.name, q)}</b>${hanjaSpan(t)}<p>${hl(t.short, q)}</p></div>${CHEVRON}</a></li>`).join("")}</ul>`;
 }
 // 용어 id → 그 용어가 표시된 도면(소주제) 경로
 const ROUTES = {};
@@ -64,7 +92,7 @@ function detailHTML(t, { showMapLink = true } = {}) {
   const rel = t.related.map((r) => TERM_BY_ID[r]).filter(Boolean);
   const map = showMapLink ? diagramRoute(t) : null;
   return `<p class="eyebrow c-${t.cat}"><a href="#/c/${t.cat}">${esc(catName(t.cat))}</a><span>${esc(subName(t.cat, t.sub))}</span></p>
-    <h2>${esc(t.name)}${t.hanja ? `<span class="h">${esc(t.hanja)}</span>` : ""}</h2>
+    <h2>${esc(t.name)}${hanjaSpan(t)}</h2>
     <p class="short">${esc(t.short)}</p>
     <p class="desc">${esc(t.desc)}</p>
     ${t.aliases.length ? `<p class="alias"><b>다른 이름</b>${t.aliases.map(esc).join(", ")}</p>` : ""}
@@ -75,30 +103,43 @@ function detailHTML(t, { showMapLink = true } = {}) {
       <a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${t.name}에 대해 설명해줘`)}">AI 튜터에게 묻기</a>
     </div>
     <a class="khs-link" href="${PHOTO_SITE}" target="_blank" rel="noopener"><span><b>국가유산 디지털 서비스</b><small>공식 사진·도면·3D 자료</small></span><i class="go">${ARROW}</i></a>
-    <p class="meta">출처 · ${esc(t.source)}</p>`;
+    <p class="meta"><b>출처</b>${esc(t.source)}</p>`;
 }
 
 // ─────────────────── 페이지 ───────────────────
+function recentRow() {
+  const r = recentTerms().slice(0, 8);
+  return r.length ? `<section class="recent"><h2 class="label">최근 본 용어</h2><div class="hscroll">${r.map((t) => `<a class="chip" href="#/t/${t.id}">${esc(t.name)}</a>`).join("")}</div></section>` : "";
+}
 function pageHome() {
+  const figCount = Object.keys(FIGURES).length;
   view.innerHTML = `<section class="home">
     <header class="hero">
+      <p class="kicker">문화유산 용어 사전</p>
       <h1 class="brand">TAMSAEK – H</h1>
       <p class="tagline">문화유산의 단어를 쉽게 이해하다.</p>
     </header>
     ${searchBox("q-home")}
+    ${recentRow()}
+    <h2 class="label">분류</h2>
     <div class="cat-grid">
-      ${CATEGORIES.map((c) => `<a class="cat-card c-${c.id}" href="#/c/${c.id}"><b>${c.name}</b></a>`).join("")}
+      ${CATEGORIES.map((c) => `<a class="cat-card c-${c.id}" href="#/c/${c.id}"><b>${c.name}</b><i lang="ko-Hani">${HANJA[c.id]}</i></a>`).join("")}
     </div>
+    <h2 class="label">도구</h2>
     <a class="hero-card" href="#/ai/tag">
-      <span class="tag-ai">AI</span>
-      <h2>사진·도면으로<br />용어 찾기</h2>
-      <p>답사 사진을 올리면 부재 이름을 찾아 드려요</p>
-      <span class="pill">시작하기</span>
+      <span class="tag-ai">AI 판독</span>
+      <h2>사진 한 장으로<br />부재 이름 찾기</h2>
+      <p>답사 사진이나 도면을 올리면 용어집에서 이름을 찾아 드려요.</p>
+      <span class="pill">사진 올리기${CHEVRON}</span>
     </a>
     <div class="mini-row">
-      <a class="mini" href="#/ai/tutor"><b>AI 용어 튜터</b><small>용어집을 근거로 답변</small></a>
+      <a class="mini" href="#/ai/tutor"><b>AI 용어 튜터</b><small>용어집을 근거로 답하고 출처를 밝혀요</small></a>
       <a class="mini" href="${PHOTO_SITE}" target="_blank" rel="noopener"><b>국가유산 디지털 서비스</b><small>실제 사진·도면·3D 자료</small><i class="go">${ARROW}</i></a>
     </div>
+    <footer class="colophon">
+      <dl><div><dt>용어</dt><dd>${TERMS.length}</dd></div><div><dt>도면</dt><dd>${figCount}</dd></div><div><dt>3D 구조</dt><dd>${STRUCTURES.length}</dd></div></dl>
+      <p>정의의 출처는 용어마다 아래쪽에 적혀 있어요. 현장에서는 도면과 함께 확인해 주세요.</p>
+    </footer>
   </section>`;
   bindSearch(view);
 }
@@ -282,27 +323,45 @@ async function pageDiagram(catId, subId, sel) {
         <div class="sheet-grab" aria-hidden="true"></div>
         <div class="sheet-head"><h2>용어 목록 <small id="sheetCount">${listTerms.length}</small></h2><button type="button" data-close>닫기</button></div>
         <div class="sheet-search"><input id="sheetq" type="search" autocomplete="off" placeholder="이 도면에서 찾기" aria-label="이 도면에서 용어 찾기" /></div>
-        <div class="sheet-list" id="sheetlist"></div>
+        <div class="sheet-body"><div class="sheet-list" id="sheetlist"></div><nav class="sheet-rail" id="sheetrail" aria-label="초성으로 이동"></nav></div>
       </section>`;
     view.appendChild(sheet);
     const listEl = sheet.querySelector("#sheetlist");
     const fillList = (q = "") => {
       const nq = normQ(q);
       const rows = listTerms.filter((t) => !nq || [t.name, t.hanja, t.short, ...t.aliases].some((x) => x && normQ(x).includes(nq)));
-      if (!rows.length) { listEl.innerHTML = `<p class="empty">찾는 용어가 이 도면에 없어요.</p>`; return; }
+      const rail = sheet.querySelector("#sheetrail");
+      if (!rows.length) { rail.innerHTML = ""; listEl.innerHTML = `<p class="empty">이 도면에는 그런 이름이 없어요.</p>`; return; }
       const groups = {};
       for (const t of rows) (groups[initialOf(t.name)] ??= []).push(t);
       listEl.innerHTML = Object.keys(groups).sort((a, b) => (a === "#") - (b === "#") || a.localeCompare(b, "ko")).map((g) =>
-        `<h3 class="grp">${g}</h3>` + groups[g].map((t) => `<button type="button" class="row${t.id === currentId ? " on" : ""}" data-pick="${t.id}"><b>${esc(t.name)}</b><span>${esc(t.short)}</span></button>`).join("")).join("");
+        `<h3 class="grp" data-g="${g}">${g}</h3>` + groups[g].map((t) => `<button type="button" class="row${t.id === currentId ? " on" : ""}" data-pick="${t.id}"><b>${hl(t.name, q)}</b><span>${esc(t.short)}</span></button>`).join("")).join("");
+      const keys = Object.keys(groups).filter((g) => g !== "#").sort((a, b) => a.localeCompare(b, "ko"));
+      rail.innerHTML = !nq && rows.length > 14 ? keys.map((g) => `<button type="button" data-jump="${g}">${g}</button>`).join("") : "";
+      listEl.scrollTop = 0;
     };
     refreshList = () => { listTerms = buildListTerms(); countEl.textContent = listTerms.length; sheet.querySelector("#sheetCount").textContent = listTerms.length; };
     const openSheet = () => { fillList(); sheet.querySelector("#sheetq").value = ""; sheet.hidden = false; document.body.classList.add("no-scroll"); };
     const closeSheet = () => { sheet.hidden = true; document.body.classList.remove("no-scroll"); };
     view.querySelector("#openList").onclick = openSheet;
+    // 손잡이·제목 줄을 아래로 끌면 닫힌다
+    const panel = sheet.querySelector(".sheet-panel");
+    let dragY = null;
+    for (const el of [sheet.querySelector(".sheet-grab"), sheet.querySelector(".sheet-head")]) {
+      el.addEventListener("touchstart", (e) => { dragY = e.touches[0].clientY; panel.style.transition = "none"; }, { passive: true });
+      el.addEventListener("touchmove", (e) => { if (dragY !== null) panel.style.transform = `translateY(${Math.max(0, e.touches[0].clientY - dragY)}px)`; }, { passive: true });
+      el.addEventListener("touchend", (e) => {
+        const dy = e.changedTouches[0].clientY - (dragY ?? 0); dragY = null;
+        panel.style.transition = ""; panel.style.transform = "";
+        if (dy > 90) closeSheet();
+      });
+    }
     view.querySelector("#clearSel").onclick = () => choose(null);
     sheet.querySelector("#sheetq").addEventListener("input", (e) => fillList(e.target.value));
     sheet.addEventListener("click", (e) => {
       if (e.target.closest("[data-close]")) return closeSheet();
+      const j = e.target.closest("[data-jump]");
+      if (j) { const h = listEl.querySelector(`[data-g="${j.dataset.jump}"]`); if (h) listEl.scrollTop = h.offsetTop; return; }
       const b = e.target.closest("[data-pick]");
       if (b) { closeSheet(); choose(b.dataset.pick, true); }
     });
@@ -316,6 +375,7 @@ async function pageDiagram(catId, subId, sel) {
     if (is3D && t && STRUCT_OF_TERM[id]) setStruct(STRUCT_OF_TERM[id]); // 구조 용어를 고르면 그 구조의 모델로 바꾼다
     const shown = t ? selectFn(id) : selectFn(null);
     currentId = t ? id : null;
+    if (t) store.push("terms", id, 12);
     view.querySelector("#clearSel")?.toggleAttribute("hidden", !currentId);
     history.replaceState(null, "", currentId ? `#/c/${catId}/${subId}?sel=${id}` : `#/c/${catId}/${subId}`);
     if (!t) { detail.hidden = true; ph.hidden = !hasFigure; return; }
@@ -332,20 +392,37 @@ async function pageDiagram(catId, subId, sel) {
 function pageTerm(id) {
   const t = TERM_BY_ID[id];
   if (!t) return pageNotFound();
-  view.innerHTML = `${header(t.cat, catName(t.cat))}<article class="detail">${detailHTML(t)}</article>`;
+  store.push("terms", id, 12);
+  // 같은 소주제 안에서 앞뒤 용어로 넘겨 볼 수 있게 한다
+  const sibs = TERMS.filter((x) => x.cat === t.cat && x.sub === t.sub);
+  const i = sibs.indexOf(t), prev = sibs[i - 1], next = sibs[i + 1];
+  const pager = sibs.length > 1 ? `<nav class="pager" aria-label="앞뒤 용어">
+      ${prev ? `<a class="prev" href="#/t/${prev.id}"><small>이전</small><b>${esc(prev.name)}</b></a>` : "<span></span>"}
+      <span class="pos">${i + 1} / ${sibs.length}</span>
+      ${next ? `<a class="next" href="#/t/${next.id}"><small>다음</small><b>${esc(next.name)}</b></a>` : "<span></span>"}
+    </nav>` : "";
+  view.innerHTML = `${header(t.cat, catName(t.cat))}<article class="detail">${detailHTML(t)}</article>${pager}`;
   bindSearch(view);
+  return t.name;
 }
 
 function pageSearch(q) {
   const res = q ? searchTerms(q) : [];
+  const searches = store.get("searches"), seen = recentTerms();
+  const idle = `${searches.length ? `<section class="recent"><h2 class="label">최근 검색<button type="button" class="link" id="clearSearches">지우기</button></h2><div class="hscroll">${searches.map((x) => `<a class="chip" href="#/s/${encodeURIComponent(x)}">${esc(x)}</a>`).join("")}</div></section>` : ""}
+    ${seen.length ? `<section class="recent"><h2 class="label">최근 본 용어</h2><div class="hscroll">${seen.map((t) => `<a class="chip" href="#/t/${t.id}">${esc(t.name)}</a>`).join("")}</div></section>` : ""}
+    <h2 class="label">전체 용어 <span>${TERMS.length}</span></h2>${termList(TERMS)}`;
   view.innerHTML = `${header(null, null)}
-    <h1 class="page">${q ? `‘${esc(q)}’ 검색 결과` : "용어 검색"}</h1>
-    ${q ? termList(res) : `<p class="lead">총 ${TERMS.length}개 용어 · 이름, 한자, 다른 이름, 설명으로 찾을 수 있습니다.</p>${termList(TERMS)}`}
-    ${q && !res.length ? `<p class="notice">용어집에 없는 표기일 수 있습니다. <a href="#/ai/tutor?q=${encodeURIComponent(`${q}이(가) 뭐야?`)}">AI 튜터에게 물어보기</a></p>` : ""}`;
+    ${q ? `<h1 class="page">‘${esc(q)}’ <span class="count">${res.length}건</span></h1>` : `<h1 class="page">용어 검색</h1><p class="lead">이름, 한자, 다른 이름, 설명에서 찾아요.</p>`}
+    ${q ? (res.length ? termList(res, q) : `<div class="empty-state"><b>‘${esc(q)}’에 맞는 용어가 없어요</b><p>표기를 바꿔 보거나(예: 층급받침 ↔ 옥개받침), 용어집에 없는 말이면 튜터에게 물어보세요.</p><a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${q}이(가) 뭐야?`)}">AI 튜터에게 묻기</a></div>`) : idle}`;
   bindSearch(view);
   const input = view.querySelector("#q-top");
   input.value = q;
-  if (!q) input.focus();
+  view._refreshSearch?.();
+  view.querySelector("[data-suggest]").innerHTML = "";
+  view.querySelector("#clearSearches")?.addEventListener("click", () => { store.clear("searches"); pageSearch(""); });
+  if (!q) input.focus({ preventScroll: true });
+  return q ? `‘${q}’ 검색` : "용어 검색";
 }
 
 // ─────────────────── AI 태깅 ───────────────────
@@ -462,22 +539,28 @@ function pageNotFound() {
 }
 
 // ─────────────────── 라우터 ───────────────────
+const tabbar = document.querySelector(".tabbar");
 function route() {
   cleanup?.(); cleanup = null;
   const [path, qs] = location.hash.replace(/^#/, "").split("?");
   const params = new URLSearchParams(qs || "");
   const seg = (path || "/").split("/").filter(Boolean).map(decodeURIComponent);
-  let nav = "home";
+  let nav = "home", title = "";
   if (!seg.length) pageHome();
-  else if (seg[0] === "c" && seg.length === 2) pageCategory(seg[1]);
-  else if (seg[0] === "c" && seg.length === 3) pageDiagram(seg[1], seg[2], params.get("sel"));
-  else if (seg[0] === "t") pageTerm(seg[1]);
-  else if (seg[0] === "s") { nav = "search"; pageSearch(seg[1] || ""); }
-  else if (seg[0] === "ai" && seg[1] === "tag") { nav = "tag"; pageTag(); }
-  else if (seg[0] === "ai" && seg[1] === "tutor") { nav = "tutor"; pageTutor(params.get("q")); }
+  else if (seg[0] === "c" && seg.length === 2) { pageCategory(seg[1]); title = catName(seg[1]); }
+  else if (seg[0] === "c" && seg.length === 3) { pageDiagram(seg[1], seg[2], params.get("sel")); title = subName(seg[1], seg[2]); }
+  else if (seg[0] === "t") title = pageTerm(seg[1]) || "";
+  else if (seg[0] === "s") { nav = "search"; title = pageSearch(seg[1] || ""); }
+  else if (seg[0] === "ai" && seg[1] === "tag") { nav = "tag"; pageTag(); title = "사진으로 용어 찾기"; }
+  else if (seg[0] === "ai" && seg[1] === "tutor") { nav = "tutor"; pageTutor(params.get("q")); title = "AI 용어 튜터"; }
   else pageNotFound();
-  document.querySelectorAll(".tabbar a").forEach((a) => a.classList.toggle("on", a.dataset.nav === nav));
+  document.title = title ? `${title} · TAMSAEK-H` : "TAMSAEK-H · 문화유산 용어 사전";
+  const tabs = [...tabbar.querySelectorAll("a")];
+  tabs.forEach((a) => { const on = a.dataset.nav === nav; a.classList.toggle("on", on); on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"); });
+  tabbar.style.setProperty("--i", tabs.findIndex((a) => a.dataset.nav === nav));
   window.scrollTo(0, 0);
 }
 addEventListener("hashchange", route);
+// 화면을 내리면 붙어 있는 탭 아래에 옅은 그림자를 준다
+addEventListener("scroll", () => document.body.classList.toggle("scrolled", scrollY > 60), { passive: true });
 route();

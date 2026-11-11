@@ -41,6 +41,9 @@ export function mountFigure(root, key, onPick) {
   const scroller = root.querySelector(".pfig-scroll");
   const inner = root.querySelector(".pfig-inner");
   const svg = root.querySelector(".pfig-ov");
+  const img = root.querySelector("img");
+  const ready = () => img.classList.add("ready");
+  img.complete ? ready() : img.addEventListener("load", ready, { once: true });
   const steps = [1, 1.6, 2.4, 3.4];
   let z = f.w >= 1000 && f.w > f.h * 1.2 ? 2 : 0; // 가로로 긴 도면만 처음부터 확대
   const apply = () => { inner.style.width = `${steps[z] * 100}%`; };
