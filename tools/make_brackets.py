@@ -25,6 +25,10 @@ def finalize(m, s):
     """괄호 마스크 → 깨끗한 윤곽 path.
     직선 괄호(세로선 + 끝 가로획)는 인쇄 망점 잡티를 지우고 선 위치·굵기·가로획을 측정해 막대로 다시 만든다.
     곡선 괄호({ } 모양)는 가우시안으로 매끈하게 한 뒤 윤곽을 딴다."""
+    # 가장 큰 연결 덩어리만 괄호로 본다(떨어져 있는 작은 조각은 본체 그림의 모서리 선 등이다)
+    n_, lab_, st_, _ = cv2.connectedComponentsWithStats(m.astype(np.uint8), connectivity=8)
+    if n_ > 2:
+        m = (lab_ == 1 + int(np.argmax(st_[1:, cv2.CC_STAT_AREA]))).astype(np.uint8)
     H, W = m.shape
     ys, xs = np.where(m)
     if len(xs) == 0: return ""
@@ -77,8 +81,12 @@ def finalize(m, s):
         if leftover > 0.02:
             is_bar = False
     if not is_bar:
-        f = cv2.GaussianBlur(m.astype(np.float32), (0, 0), max(1.0, 0.9 * s))
-        out = (f > 0.45).astype(np.uint8)
+        # 원본 선이 가늘거나 끊긴 곳(스캔 틈)을 먼저 이어 붙인 뒤 매끈하게 한다
+        gap = cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (int(2 * s) + 1, int(10 * s) + 1)))
+        f = cv2.GaussianBlur(gap.astype(np.float32), (0, 0), max(1.0, 0.9 * s))
+        out = (f > 0.35).astype(np.uint8)
+    ncomp = cv2.connectedComponents(out)[0] - 1
+    if ncomp != 1: print(f"    ⚠ 괄호가 {ncomp}덩어리로 끊김")
     cs, _ = cv2.findContours(out, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     d = ""
     for c in cs:
