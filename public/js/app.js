@@ -39,20 +39,37 @@ function header(cat, here) {
 }
 function termList(terms) {
   if (!terms.length) return `<p class="placeholder">해당하는 용어가 없습니다.</p>`;
-  return `<ul class="term-list">${terms.map((t) => `<li><a href="#/t/${t.id}"><b>${esc(t.name)}</b>${t.hanja ? `<span class="h">${esc(t.hanja)}</span>` : ""}<p>${esc(t.short)}</p></a></li>`).join("")}</ul>`;
+  return `<ul class="term-list">${terms.map((t) => `<li class="c-${t.cat}"><a href="#/t/${t.id}"><b>${esc(t.name)}</b>${t.hanja ? `<span class="h">${esc(t.hanja)}</span>` : ""}<p>${esc(t.short)}</p></a></li>`).join("")}</ul>`;
 }
 // 용어 id → 그 용어가 표시된 도면(소주제) 경로
 const ROUTES = {};
 for (const c of CATEGORIES) for (const s of c.subs) {
   const ids = s.figs ? s.figs.flatMap(figureTermIds) : s.diagram === "model3d" ? IDS_3D : s.diagram ? idsInDiagram(renderDiagram(s.diagram)) : [];
-  for (const id of ids) ROUTES[id] ??= `#/c/${c.id}/${s.id}`;
+  for (const id of ids) {
+    if (c.id === "temple" && TERM_BY_ID[id]?.sub !== s.id) continue; // 사찰은 같은 배치도를 공유하므로 용어의 소주제 페이지로 연결
+    ROUTES[id] ??= `#/c/${c.id}/${s.id}`;
+  }
 }
 function diagramRoute(t) {
   return ROUTES[t.id] ? `${ROUTES[t.id]}?sel=${t.id}` : null;
 }
-function photoUrl(t) {
-  return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${t.name} ${t.hanja || ""} ${catName(t.cat)}`.trim())}`;
+// 국가유산 디지털(digital.khs.go.kr). 검색 주소 형식을 확인하지 못해 첫 화면으로 보내고, 용어를 복사해 붙여넣게 한다.
+const PHOTO_SITE = "https://digital.khs.go.kr/";
+const searchWord = (t) => t.name.replace(/\(.+\)$/, "");
+let toastTimer;
+function toast(msg) {
+  let el = document.getElementById("toast");
+  if (!el) { el = document.createElement("div"); el.id = "toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 3800);
 }
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-photo]");
+  if (!a) return;
+  const word = a.dataset.photo;
+  try { navigator.clipboard?.writeText(word); } catch { /* 복사 실패해도 사이트는 열린다 */ }
+  toast(`‘${word}’ 복사됨 — 국가유산 디지털 검색창에 붙여넣으세요`);
+});
 function detailHTML(t, { showMapLink = true } = {}) {
   const rel = t.related.map((r) => TERM_BY_ID[r]).filter(Boolean);
   const map = showMapLink ? diagramRoute(t) : null;
@@ -63,23 +80,33 @@ function detailHTML(t, { showMapLink = true } = {}) {
     ${rel.length ? `<div class="section-title">관련 용어</div><div class="chips">${rel.map((r) => `<a class="chip" href="#/t/${r.id}" data-pick="${r.id}">${esc(r.name)}</a>`).join("")}</div>` : ""}
     <div class="actions">
       ${map ? `<a class="btn primary" href="${map}">도면·3D에서 위치 보기</a>` : ""}
-      <a class="btn" href="${photoUrl(t)}" target="_blank" rel="noopener">실제 사진 보기 ↗</a>
+      <a class="btn" href="${PHOTO_SITE}" target="_blank" rel="noopener" data-photo="${esc(searchWord(t))}">실제 사진 보기 ↗</a>
       <a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${t.name}에 대해 설명해줘`)}">AI 튜터에게 묻기</a>
     </div>
     <p class="meta">${esc(catName(t.cat))} › ${esc(subName(t.cat, t.sub))} · 출처: ${esc(t.source)}</p>`;
 }
 
 // ─────────────────── 페이지 ───────────────────
+const ICONS = {
+  stone: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3v5M21 8h6l1 3h-8zM16 11h16l3 5H13zM18 16v7M30 16v7M11 23h26l3 6H8zM14 29v8M34 29v8M6 37h36v5H6z"/></svg>`,
+  wood: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M3 19 24 7l21 12M8 19h32M12 19v20M36 19v20M20 39V27h8v12M5 39h38"/></svg>`,
+  buddha: `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="15" r="6"/><circle cx="24" cy="15" r="13" stroke-dasharray="2 3"/><path d="M13 41c0-9 4-15 11-15s11 6 11 15zM7 41h34M20 33c2 2 6 2 8 0"/></svg>`,
+  temple: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 14h40M9 14l-3-6h36l-3 6M14 14v26M34 14v26M10 24h28M3 40h42"/></svg>`,
+};
 function pageHome() {
   view.innerHTML = `<section class="home">
-    <h1 class="brand">TAMSAEK – H<small>문화유산의 단어를 쉽게 이해하다.</small></h1>
+    <header class="hero">
+      <span class="seal" aria-hidden="true">探</span>
+      <h1 class="brand">TAMSAEK – H</h1>
+      <p class="tagline">문화유산의 단어를 쉽게 이해하다.</p>
+    </header>
     ${searchBox("q-home")}
-    <div class="cat-list">
-      ${CATEGORIES.map((c) => `<a class="cat-btn" href="#/c/${c.id}">${c.name}<span>${c.subs.map((s) => s.name.replace(/ \(.+\)/, "")).join(" · ")}</span></a>`).join("")}
+    <div class="cat-grid">
+      ${CATEGORIES.map((c) => `<a class="cat-card c-${c.id}" href="#/c/${c.id}"><span class="ic">${ICONS[c.id] || ""}</span><b>${c.name}</b></a>`).join("")}
     </div>
     <div class="ai-entry">
-      <a href="#/ai/tag">📷 사진·도면으로 용어 찾기<small>AI가 부재를 인식해 태그</small></a>
-      <a href="#/ai/tutor">💬 AI 용어 튜터<small>용어집 근거로 답변·출처 표시</small></a>
+      <a href="#/ai/tag"><span class="ai-ic">📷</span><span>사진·도면으로 용어 찾기<small>AI가 부재를 인식해 태그</small></span></a>
+      <a href="#/ai/tutor"><span class="ai-ic">💬</span><span>AI 용어 튜터<small>용어집 근거로 답변·출처 표시</small></span></a>
     </div>
   </section>`;
   bindSearch(view);
@@ -111,6 +138,7 @@ async function pageDiagram(catId, subId, sel) {
   if (is3D) figureHTML = `<div class="stage" id="stage"><div class="loading" id="loading"><span><span class="spinner"></span><br/>3D 모델 불러오는 중…</span></div>
           <div class="tools"><button type="button" id="roof">지붕</button><button type="button" id="reset">해제</button></div></div>`;
   else if (figs.length) figureHTML = `${figs.length > 1 ? `<div class="seg" id="figtabs">${figs.map((k, i) => `<button type="button" data-fig="${k}" class="${i ? "" : "on"}">${esc(figLabel(k))}</button>`).join("")}</div>` : ""}<div id="figbox"></div>`;
+  else if (s.diagram === "temple") figureHTML = `<span class="hint">건물을 탭하세요 · 좌우로 밀어 볼 수 있어요</span><div class="dgscroll">${renderDiagram("temple", { sub: s.id })}</div>`;
   else if (s.diagram) figureHTML = `<span class="hint">부재나 이름을 탭하세요</span>${renderDiagram(s.diagram)}`;
 
   view.innerHTML = `${header(c.id, c.name)}
@@ -167,7 +195,16 @@ async function pageDiagram(catId, subId, sel) {
   } else if (s.diagram) {
     const svg = view.querySelector("#fig svg");
     ids = idsInDiagram(svg.outerHTML);
-    selectFn = (id) => highlight(svg, id);
+    const scroller = s.diagram === "temple" ? svg.parentElement : null;
+    selectFn = (id) => {
+      const ok = highlight(svg, id);
+      if (ok && scroller) {
+        const r = svg.querySelector(".part.on").getBoundingClientRect(), sr = scroller.getBoundingClientRect();
+        scroller.scrollTo({ left: scroller.scrollLeft + (r.left + r.width / 2) - (sr.left + sr.width / 2), behavior: "smooth" });
+      }
+      return ok;
+    };
+    if (scroller && !sel) requestAnimationFrame(() => { scroller.scrollLeft = (scroller.scrollWidth - scroller.clientWidth) / 2; });
     svg.addEventListener("click", (e) => {
       const el = e.target.closest("[data-id]");
       choose(el ? el.dataset.id : null);

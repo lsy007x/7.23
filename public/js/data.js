@@ -604,6 +604,11 @@ TERMS.push(
   ]),
 );
 
+TERMS.push({
+  ...t("cheoma", "처마", "", "stone", "lantern", "옥개석 가장자리의 바깥으로 내민 부분", "지붕돌(옥개석)의 아랫부분 가장자리가 벽(화사석) 바깥으로 내민 부분. 석등 부재도에서는 옥개석 아랫단의 가장자리선을 가리킨다.", ["lt_okgae", "udong", "hwasaseok"]),
+  source: "석등 부재도(사용자 제공 이미지) — 명칭은 도면, 설명은 편집 초안(검수 필요)",
+});
+
 export const TERM_BY_ID = Object.fromEntries(TERMS.map((x) => [x.id, x]));
 export const catName = (id) => CATEGORIES.find((c) => c.id === id)?.name ?? id;
 export const subName = (cat, sub) =>
