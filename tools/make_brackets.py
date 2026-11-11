@@ -46,11 +46,15 @@ def bracket_for(gray, s, box, W):
 # 하나의 긴 괄호를 여러 이름이 구간으로 나눠 쓰는 도면(괄호 가지의 y 위치를 도면에서 읽은 값)
 SLICES = {
     "lantern": {6: (419, 543), 7: (536, 806), 8: (799, 915)},   # 상대석 / 중대석(간주석) / 하대석
+    "pagoda": {0: (28, 244), 1: (238, 502, 0, 112), 2: (503, 676, 60, 112)},   # 옥개석·탑신석의 작은 괄호는 본체와 붙어 있어 정확히 떼어낼 수 없으므로 만들지 않는다   # 상륜부 / 탑신부 / 기단부 (상륜부·탑신부 괄호는 서로 붙어 있어 y로 자른다)
     "stele": {0: (38, 226), 1: (216, 651), 2: (641, 888)},   # 이수부 / 비신부 / 귀부부 (왼쪽 세로 괄호선을 가지 y 기준으로 자름)
     "buddha": {1: (160, 578), 3: (570, 662), 4: (654, 846), 5: (838, 946)},   # 불신 / 상대석 / 중대석 / 하대석 (오른쪽 긴 괄호)
 }
 
-def slice_path(gray, s, box, y0, y1, W):
+# 괄호를 만들지 않는 이름(괄호가 본체 그림과 붙어 있어 정확히 떼어낼 수 없는 것)
+SKIP = {"pagoda": {16, 17}}
+
+def slice_path(gray, s, box, y0, y1, W, x0=None, x1=None):
     """이름 상자 옆 괄호 덩어리 중 y0~y1 구간만 잘라 윤곽으로 만든다."""
     ink = (gray < 150).astype(np.uint8)
     n, lab, st, _ = cv2.connectedComponentsWithStats(ink, connectivity=8)
@@ -58,7 +62,7 @@ def slice_path(gray, s, box, y0, y1, W):
     best = None
     for i in range(1, n):
         bx, by, bw, bh, area = [v / s if k < 4 else v for k, v in enumerate(st[i])]
-        if bh < 80 or bw > 0.5 * W: continue
+        if bh < 80 or (bw > 0.5 * W and x1 is None): continue   # x 범위를 준 경우는 본체와 붙은 괄호도 허용(x로 잘라낸다)
         # 이름 상자와 가로로 가까운 괄호(상자 오른쪽이든 왼쪽이든)이고 구간이 걸치는 덩어리
         if abs((bx + bw / 2) - (x + w / 2)) < 0.38 * W and by <= (y0 + y1) / 2 <= by + bh:
             d = abs(bx + bw / 2 - (x + w / 2))
@@ -66,6 +70,8 @@ def slice_path(gray, s, box, y0, y1, W):
     if best is None: return None
     m = (lab == best[1]).astype(np.uint8)
     m[:max(0, int(y0 * s))] = 0; m[int(y1 * s):] = 0
+    if x0 is not None: m[:, :max(0, int(x0 * s))] = 0
+    if x1 is not None: m[:, int(x1 * s):] = 0
     cs, _ = cv2.findContours(m, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     d = ""
     for c in cs:
@@ -85,8 +91,10 @@ def main():
         res = {}
         for gi in groups:
             name, box, _ = f["spots"][int(gi)]
+            if int(gi) in SKIP.get(key, ()):
+                continue
             sl = SLICES.get(key, {}).get(int(gi))
-            d = slice_path(gray, s, box, sl[0], sl[1], f["w"]) if sl else bracket_for(gray, s, box, f["w"])
+            d = slice_path(gray, s, box, *sl[:2], f["w"], *sl[2:]) if sl else bracket_for(gray, s, box, f["w"])
             if d:
                 res[gi] = d
         out[key] = res

@@ -83,13 +83,13 @@ export function mountFigure(root, key, onPick) {
     }
     for (const i of spots) {
       const [, [x, y, w, hh], ps] = f.spots[i];
-      const box = `x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${hh + 8}" rx="4"`;
+      const box = `x="${x - 1}" y="${y - 1}" width="${w + 2}" height="${hh + 2}" rx="2"`;
       h += `<rect ${box} fill="#000"/>`;
       m += `<rect class="gbox" ${box}/>`;
       if (i in groups || (regions.length && own.includes(i)) || (own.length && !own.includes(i) && (own.some((o) => o in groups)))) { pts.push([x + w / 2, y + hh / 2]); continue; } // 지시선이 없는 괄호식 이름·그 소속 부재 이름·면적으로 표시한 부재: 선·점 없음
       for (const [px, py] of ps) {
-        const ax = px < x ? x - 4 : px > x + w ? x + w + 4 : px;
-        const ay = py < y ? y - 4 : py > y + hh ? y + hh + 4 : py;
+        const ax = px < x ? x - 1 : px > x + w ? x + w + 1 : px;
+        const ay = py < y ? y - 1 : py > y + hh ? y + hh + 1 : py;
         h += `<circle cx="${px}" cy="${py}" r="16" fill="#000"/>`;
         m += `<line class="gline" x1="${ax}" y1="${ay}" x2="${px}" y2="${py}"/><circle class="gpt" cx="${px}" cy="${py}" r="11"/>`;
         pts.push([px, py]);
