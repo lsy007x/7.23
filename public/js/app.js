@@ -87,26 +87,26 @@ function detailHTML(t, { showMapLink = true } = {}) {
 }
 
 // ─────────────────── 페이지 ───────────────────
-const ICONS = {
-  stone: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3v5M21 8h6l1 3h-8zM16 11h16l3 5H13zM18 16v7M30 16v7M11 23h26l3 6H8zM14 29v8M34 29v8M6 37h36v5H6z"/></svg>`,
-  wood: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M3 19 24 7l21 12M8 19h32M12 19v20M36 19v20M20 39V27h8v12M5 39h38"/></svg>`,
-  buddha: `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="15" r="6"/><circle cx="24" cy="15" r="13" stroke-dasharray="2 3"/><path d="M13 41c0-9 4-15 11-15s11 6 11 15zM7 41h34M20 33c2 2 6 2 8 0"/></svg>`,
-  temple: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 14h40M9 14l-3-6h36l-3 6M14 14v26M34 14v26M10 24h28M3 40h42"/></svg>`,
-};
+const ARROW = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>`;
 function pageHome() {
   view.innerHTML = `<section class="home">
     <header class="hero">
-      <span class="seal" aria-hidden="true">探</span>
       <h1 class="brand">TAMSAEK – H</h1>
       <p class="tagline">문화유산의 단어를 쉽게 이해하다.</p>
     </header>
     ${searchBox("q-home")}
     <div class="cat-grid">
-      ${CATEGORIES.map((c) => `<a class="cat-card c-${c.id}" href="#/c/${c.id}"><span class="ic">${ICONS[c.id] || ""}</span><b>${c.name}</b></a>`).join("")}
+      ${CATEGORIES.map((c) => `<a class="cat-card c-${c.id}" href="#/c/${c.id}"><b>${c.name}</b></a>`).join("")}
     </div>
-    <div class="ai-entry">
-      <a href="#/ai/tag"><span class="ai-ic">📷</span><span>사진·도면으로 용어 찾기<small>AI가 부재를 인식해 태그</small></span></a>
-      <a href="#/ai/tutor"><span class="ai-ic">💬</span><span>AI 용어 튜터<small>용어집 근거로 답변·출처 표시</small></span></a>
+    <a class="hero-card" href="#/ai/tag">
+      <span class="tag-ai">AI</span>
+      <h2>사진·도면으로<br />용어 찾기</h2>
+      <p>답사 사진을 올리면 부재 이름을 찾아 드려요</p>
+      <span class="pill">시작하기</span>
+    </a>
+    <div class="mini-row">
+      <a class="mini" href="#/ai/tutor"><b>AI 용어 튜터</b><small>용어집을 근거로 답변</small></a>
+      <a class="mini" href="${PHOTO_SITE}" target="_blank" rel="noopener"><b>국가유산 디지털 서비스</b><small>실제 사진·도면·3D 자료</small><i class="go">${ARROW}</i></a>
     </div>
   </section>`;
   bindSearch(view);
@@ -115,14 +115,19 @@ function pageHome() {
 function pageCategory(catId) {
   const c = CATEGORIES.find((x) => x.id === catId);
   if (!c) return pageNotFound();
+  const all = TERMS.filter((t) => t.cat === c.id);
   view.innerHTML = `${header(c.id, c.name)}
     <h1 class="page">${c.name}</h1>
-    <p class="lead">소주제를 고르면 도면에서 부재 위치와 함께 용어를 볼 수 있습니다.</p>
+    <p class="lead">주제를 고르면 도면에서 부재 위치와 함께 용어를 볼 수 있습니다.</p>
     <nav class="sub-grid">${c.subs.map((s) => `<a href="#/c/${c.id}/${s.id}">${s.name}</a>`).join("")}</nav>
-    <div class="section-title">${c.name} 전체 용어 (${TERMS.filter((t) => t.cat === c.id).length})</div>
-    ${termList(TERMS.filter((t) => t.cat === c.id))}`;
+    <details class="all-terms"><summary>전체 용어 ${all.length}개 보기</summary>${termList(all)}</details>`;
   bindSearch(view);
 }
+
+// 가나다 색인용 초성
+const CHO = ["ㄱ", "ㄱ", "ㄴ", "ㄷ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅂ", "ㅅ", "ㅅ", "ㅇ", "ㅈ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
+const initialOf = (name) => { const c = name.charCodeAt(0) - 0xac00; return c >= 0 && c < 11172 ? CHO[Math.floor(c / 588)] : "#"; };
+const normQ = (x) => x.toLowerCase().replace(/[\s·()\-]/g, "");
 
 async function pageDiagram(catId, subId, sel) {
   const c = CATEGORIES.find((x) => x.id === catId);
@@ -136,24 +141,29 @@ async function pageDiagram(catId, subId, sel) {
 
   let figureHTML = "";
   if (is3D) figureHTML = `<div class="stage" id="stage"><div class="loading" id="loading"><span><span class="spinner"></span><br/>3D 모델 불러오는 중…</span></div>
-          <div class="tools"><button type="button" id="roof">지붕</button><button type="button" id="reset">해제</button></div></div>`;
+          <div class="tools"><button type="button" id="front">정면 보기</button><button type="button" id="roof">지붕</button><button type="button" id="reset">해제</button></div></div>`;
   else if (figs.length) figureHTML = `${figs.length > 1 ? `<div class="seg" id="figtabs">${figs.map((k, i) => `<button type="button" data-fig="${k}" class="${i ? "" : "on"}">${esc(figLabel(k))}</button>`).join("")}</div>` : ""}<div id="figbox"></div>`;
   else if (s.diagram === "temple") figureHTML = `<span class="hint">건물을 탭하세요 · 좌우로 밀어 볼 수 있어요</span><div class="dgscroll">${renderDiagram("temple", { sub: s.id })}</div>`;
-  else if (s.diagram) figureHTML = `<span class="hint">부재나 이름을 탭하세요</span>${renderDiagram(s.diagram)}`;
+
+  const hint = is3D ? "모델을 돌려 보고(한 손가락 회전·두 손가락 확대) 부재를 탭하세요. 금색 화살표와 ‘정면(앞)’ 표지가 건물의 앞쪽이에요. 같은 부재를 다시 탭하면 선택이 풀려요."
+    : figs.length ? "도면의 부재나 이름을 탭하면 금색으로 강조돼요. 다시 탭하면 풀리고, ＋/− 로 확대할 수 있어요."
+    : "건물을 탭하면 금색으로 강조돼요. 다시 탭하면 풀려요.";
 
   view.innerHTML = `${header(c.id, c.name)}
     <nav class="sub-grid">${c.subs.map((x) => `<a href="#/c/${c.id}/${x.id}" class="${x.id === subId ? "on" : ""}">${x.name}</a>`).join("")}</nav>
-    ${hasFigure ? `<div class="figure${figs.length ? " figure-photo" : ""}" id="fig">${figureHTML}</div>` : ""}
-    ${hasFigure ? `<div class="chips" id="chips"></div>` : `<div id="chips" hidden></div>${termList(subTerms)}`}
+    ${hasFigure ? `<div class="figure${figs.length ? " figure-photo" : ""}" id="fig">${figureHTML}</div>
+      <div class="selbar"><button type="button" class="btn-list" id="openList">용어 목록 <b id="listCount"></b></button><button type="button" class="btn-ghost" id="clearSel" hidden>선택 해제</button></div>`
+      : termList(subTerms)}
     <article class="detail" id="detail" hidden aria-live="polite"></article>
-    ${hasFigure ? `<p class="placeholder" id="ph">${is3D ? "모델을 돌려 보고(한 손가락 회전·두 손가락 확대) 부재를 탭하세요." : figs.length ? "도면의 부재나 이름을 탭하면 금색으로 강조되고 설명이 나타납니다. ＋/− 로 확대하고 손가락으로 움직여 보세요." : "도면에서 부재를 탭하면 금색으로 강조되고 설명이 나타납니다."}</p>` : `<p id="ph" hidden></p>`}`;
+    ${hasFigure ? `<p class="placeholder" id="ph">${hint}</p>` : `<p id="ph" hidden></p>`}`;
   bindSearch(view);
 
-  const chips = view.querySelector("#chips");
   const detail = view.querySelector("#detail");
   const ph = view.querySelector("#ph");
   let ids = [];
   let selectFn = () => false;
+  let currentId = null;
+  let model3d = null;
 
   if (is3D) {
     const { mountModel } = await import("./model3d.js");
@@ -161,28 +171,29 @@ async function pageDiagram(catId, subId, sel) {
     const names = Object.fromEntries(ids.map((i) => [i, TERM_BY_ID[i]?.name]));
     try {
       const stage = view.querySelector("#stage");
-      const model = await mountModel(stage, { onPick: (id) => choose(id), names });
+      const roofBtn = view.querySelector("#roof");
+      const model = await mountModel(stage, { onPick: pick, names, onRoof: (on) => roofBtn.classList.toggle("on", on) });
       if (!stage.isConnected) return model.dispose(); // 로딩 중 다른 페이지로 이동한 경우
+      model3d = model;
       view.querySelector("#loading")?.remove();
       selectFn = (id) => model.select(id);
-      const roofBtn = view.querySelector("#roof");
-      roofBtn.onclick = () => roofBtn.classList.toggle("on", model.toggleRoof());
+      roofBtn.onclick = () => model.toggleRoof();
+      view.querySelector("#front").onclick = () => model.viewFront();
       view.querySelector("#reset").onclick = () => choose(null);
-      cleanup = () => model.dispose();
     } catch (e) {
       console.error(e);
       const ld = view.querySelector("#loading");
       if (ld) ld.textContent = "3D를 불러오지 못했습니다. 네트워크 연결(three.js CDN)과 WebGL 지원 여부를 확인하세요.";
     }
   } else if (figs.length) {
-    // 원본 도면(사용자 제공 부록). 소주제에 도면이 여러 장이면 탭으로 전환
+    // 원본 도면(사용자 제공 문서). 소주제에 도면이 여러 장이면 탭으로 전환
     const box = view.querySelector("#figbox");
     const tabs = view.querySelector("#figtabs");
     let cur, viewer;
     const show = (k) => {
       cur = k;
       box.innerHTML = renderFigure(k);
-      viewer = mountFigure(box.firstElementChild, k, (id) => choose(id));
+      viewer = mountFigure(box.firstElementChild, k, pick);
       tabs?.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.fig === k));
     };
     tabs?.addEventListener("click", (e) => { const b = e.target.closest("[data-fig]"); if (b && b.dataset.fig !== cur) { show(b.dataset.fig); choose(null); } });
@@ -207,26 +218,66 @@ async function pageDiagram(catId, subId, sel) {
     if (scroller && !sel) requestAnimationFrame(() => { scroller.scrollLeft = (scroller.scrollWidth - scroller.clientWidth) / 2; });
     svg.addEventListener("click", (e) => {
       const el = e.target.closest("[data-id]");
-      choose(el ? el.dataset.id : null);
+      pick(el ? el.dataset.id : null);
     });
   }
-  // 이 페이지의 용어 칩: 도면에 있는 용어 + 소주제 용어(사찰은 소주제 필터)
-  const chipIds = catId === "temple" ? subTerms.map((t) => t.id) : [...new Set([...ids, ...subTerms.map((t) => t.id)])];
-  chips.innerHTML = chipIds.filter((i) => TERM_BY_ID[i]).map((i) => `<button type="button" class="chip" data-pick="${i}">${esc(TERM_BY_ID[i].name)}</button>`).join("");
-  chips.addEventListener("click", (e) => { const b = e.target.closest("[data-pick]"); if (b) choose(b.dataset.pick); });
+  cleanup = () => { document.body.classList.remove("no-scroll"); model3d?.dispose(); };
+
+  // 이 도면(소주제)에 나오는 용어 목록. 사찰은 소주제별로 나눠 보여 준다
+  const listIds = (catId === "temple" ? subTerms.map((t) => t.id) : ids).filter((i) => TERM_BY_ID[i]);
+  const listTerms = [...new Set(listIds)].map((i) => TERM_BY_ID[i]).sort((a, b) => a.name.localeCompare(b.name, "ko"));
   detail.addEventListener("click", (e) => {
     const a = e.target.closest("a[data-pick]");
-    if (a && chipIds.includes(a.dataset.pick)) { e.preventDefault(); choose(a.dataset.pick, true); }
+    if (a && listIds.includes(a.dataset.pick)) { e.preventDefault(); choose(a.dataset.pick, true); }
   });
+
+  // 용어 목록 시트 (가나다 색인 + 도면 안 검색)
+  if (hasFigure) {
+    view.querySelector("#listCount").textContent = listTerms.length;
+    const sheet = document.createElement("div");
+    sheet.className = "sheet"; sheet.hidden = true;
+    sheet.innerHTML = `<div class="sheet-bg" data-close></div>
+      <section class="sheet-panel" role="dialog" aria-modal="true" aria-label="용어 목록">
+        <div class="sheet-grab" aria-hidden="true"></div>
+        <div class="sheet-head"><h2>용어 목록 <small>${listTerms.length}</small></h2><button type="button" data-close>닫기</button></div>
+        <div class="sheet-search"><input id="sheetq" type="search" autocomplete="off" placeholder="이 도면에서 찾기" aria-label="이 도면에서 용어 찾기" /></div>
+        <div class="sheet-list" id="sheetlist"></div>
+      </section>`;
+    view.appendChild(sheet);
+    const listEl = sheet.querySelector("#sheetlist");
+    const fillList = (q = "") => {
+      const nq = normQ(q);
+      const rows = listTerms.filter((t) => !nq || [t.name, t.hanja, t.short, ...t.aliases].some((x) => x && normQ(x).includes(nq)));
+      if (!rows.length) { listEl.innerHTML = `<p class="empty">찾는 용어가 이 도면에 없어요.</p>`; return; }
+      const groups = {};
+      for (const t of rows) (groups[initialOf(t.name)] ??= []).push(t);
+      listEl.innerHTML = Object.keys(groups).sort((a, b) => (a === "#") - (b === "#") || a.localeCompare(b, "ko")).map((g) =>
+        `<h3 class="grp">${g}</h3>` + groups[g].map((t) => `<button type="button" class="row${t.id === currentId ? " on" : ""}" data-pick="${t.id}"><b>${esc(t.name)}</b><span>${esc(t.short)}</span></button>`).join("")).join("");
+    };
+    const openSheet = () => { fillList(); sheet.querySelector("#sheetq").value = ""; sheet.hidden = false; document.body.classList.add("no-scroll"); };
+    const closeSheet = () => { sheet.hidden = true; document.body.classList.remove("no-scroll"); };
+    view.querySelector("#openList").onclick = openSheet;
+    view.querySelector("#clearSel").onclick = () => choose(null);
+    sheet.querySelector("#sheetq").addEventListener("input", (e) => fillList(e.target.value));
+    sheet.addEventListener("click", (e) => {
+      if (e.target.closest("[data-close]")) return closeSheet();
+      const b = e.target.closest("[data-pick]");
+      if (b) { closeSheet(); choose(b.dataset.pick, true); }
+    });
+  }
+
+  // 도면·3D를 직접 탭했을 때: 같은 부재를 다시 탭하면 선택 해제
+  function pick(id) { choose(id && id === currentId ? null : id); }
 
   function choose(id, scroll = false) {
     const t = id && TERM_BY_ID[id];
     const shown = t ? selectFn(id) : selectFn(null);
-    chips.querySelectorAll(".chip").forEach((b) => b.classList.toggle("on", b.dataset.pick === id));
+    currentId = t ? id : null;
+    view.querySelector("#clearSel")?.toggleAttribute("hidden", !currentId);
+    history.replaceState(null, "", currentId ? `#/c/${catId}/${subId}?sel=${id}` : `#/c/${catId}/${subId}`);
     if (!t) { detail.hidden = true; ph.hidden = !hasFigure; return; }
     detail.innerHTML = detailHTML(t, { showMapLink: !hasFigure }) + (hasFigure && shown === false ? `<p class="notice">이 도면에는 해당 부재가 따로 표시되어 있지 않습니다.</p>` : "");
     detail.hidden = false; ph.hidden = true;
-    history.replaceState(null, "", `#/c/${catId}/${subId}?sel=${id}`);
     if (scroll) view.querySelector(hasFigure ? "#fig" : "#detail").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   if (sel) {

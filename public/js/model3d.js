@@ -15,7 +15,7 @@ export const IDS_3D = [
   "il_goju_5ryang", "ryang5", "ryangga", "dori", "kan",
 ];
 
-export async function mountModel(el, { onPick, names }) {
+export async function mountModel(el, { onPick, names, onRoof }) {
   const THREE = await import("three");
   const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
 
@@ -63,6 +63,14 @@ export async function mountModel(el, { onPick, names }) {
   const base = new THREE.Mesh(box(12.4, 0.5, 7.6), new THREE.MeshStandardMaterial({ color: 0xbfb4a2, roughness: 1 }));
   base.position.set(0, -0.25, 3);
   scene.add(base);
+
+  // 정면 표시 (건물 앞쪽 = z가 작은 쪽, 퇴칸이 있는 면): 금색 띠 + 화살표 + 표지
+  const frontMat = new THREE.MeshBasicMaterial({ color: gold });
+  const frontBar = new THREE.Mesh(box(12.4, 0.05, 0.16), frontMat);
+  frontBar.position.set(0, 0.03, -0.72);
+  scene.add(frontBar);
+  const frontArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0.08, -3.9), 2.6, gold.getHex(), 0.9, 0.7);
+  scene.add(frontArrow);
 
   const X = [-5.1, -1.8, 1.8, 5.1];          // 기둥 열: 협칸 3.3 / 어칸 3.6 / 협칸 3.3
   const Z_FRONT = 0, Z_GOJU = 1.5, Z_DONG = 4.5, Z_BACK = 6, Z_RIDGE = 3;
@@ -145,12 +153,22 @@ export async function mountModel(el, { onPick, names }) {
     sp.renderOrder = 10;
     return sp;
   }
+  const frontLabel = makeLabel("정면 (앞)");
+  frontLabel.position.set(0, 0.9, -4.6);
+  scene.add(frontLabel);
+  let current = null;
+  function setRoof(on) {
+    roofOn = on;
+    roofMeshes.forEach((m) => (m.visible = on));
+    onRoof?.(on);
+  }
   function select(id) {
+    current = id || null;
     edges.forEach((e) => scene.remove(e)); edges.length = 0;
     if (label) { scene.remove(label); label = null; }
     const ids = id ? [id, ...(GROUPS3D[id] || [])] : [];
     const on = new Set(ids.flatMap((x) => byId.get(x) || []));
-    if (id === "matbae" && !roofOn) toggleRoof(true);
+    if (id === "matbae" && !roofOn) setRoof(true);
     for (const m of pickables) {
       const mat = m.material;
       if (!id) { mat.opacity = m.userData.baseOpacity; mat.emissive.setRGB(0, 0, 0); mat.depthWrite = mat.opacity === 1; continue; }
@@ -174,10 +192,16 @@ export async function mountModel(el, { onPick, names }) {
     }
     return true;
   }
-  function toggleRoof(force) {
-    roofOn = force ?? !roofOn;
-    roofMeshes.forEach((m) => (m.visible = roofOn));
+  // 지붕을 켜고 끌 때도 현재 선택 상태(강조·반투명)를 다시 적용해, 지붕이 선택한 부재를 가리지 않게 한다
+  function toggleRoof() {
+    setRoof(!roofOn);
+    select(current);
     return roofOn;
+  }
+  function viewFront() {
+    camera.position.set(0, 5.5, -17);
+    controls.target.set(0, 3, 3);
+    controls.update();
   }
 
   // 탭으로 부재 선택 (드래그와 구분)
@@ -204,7 +228,7 @@ export async function mountModel(el, { onPick, names }) {
   (function loop() { if (!alive) return; controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); })();
 
   return {
-    select, toggleRoof,
+    select, toggleRoof, viewFront,
     dispose() { alive = false; ro.disconnect(); renderer.dispose(); renderer.domElement.remove(); },
   };
 }

@@ -1,73 +1,7 @@
 // 인터랙티브 도면 (SVG). 부재마다 data-id(용어 id)를 달아 클릭 시 하이라이트한다.
 import { TERM_BY_ID } from "./data.js";
 
-const R = (x, y, w, h, extra = "") => `<rect x="${x}" y="${y}" width="${w}" height="${h}" ${extra}/>`;
-const Poly = (pts, extra = "") => `<polygon points="${pts.map((p) => p.map((v) => +v.toFixed(1)).join(",")).join(" ")}" ${extra}/>`;
 const nameOf = (id) => TERM_BY_ID[id]?.name.replace(/\(.+\)$/, "") ?? id;
-
-/**
- * spec: { viewBox:[w,h], parts:[{id, svg, anchor:[x,y], cls, label, side:"L"|"R"}], labelX, labelXL, labelTop, labelBottom, labelGap }
- * 라벨은 왼쪽(side:"L", labelXL 기준)·오른쪽(labelX 기준)에 나눠 배치한다.
- */
-function build(spec) {
-  const [W, H] = spec.viewBox;
-  let out = `<svg class="dg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${spec.title}">`;
-  out += `<title>${spec.title}</title>`;
-  for (const p of spec.parts) out += `<g class="part ${p.cls || ""}" data-id="${p.id}">${p.svg}</g>`;
-
-  const seen = new Set();
-  const labels = spec.parts
-    .filter((p) => p.anchor && !seen.has(p.id) && seen.add(p.id))
-    .map((p) => ({ id: p.id, side: p.side || "R", ax: p.anchor[0], ay: p.anchor[1], text: p.label || nameOf(p.id) }));
-  const gap = spec.labelGap || 19;
-  for (const side of ["L", "R"]) {
-    const col = labels.filter((l) => l.side === side).sort((a, b) => a.ay - b.ay);
-    let prev = spec.labelTop - gap;
-    for (const l of col) { l.y = Math.max(l.ay, prev + gap); prev = l.y; }
-    let next = spec.labelBottom + gap;
-    if (prev > spec.labelBottom) for (let i = col.length - 1; i >= 0; i--) { col[i].y = Math.min(col[i].y, next - gap); next = col[i].y; }
-    for (const l of col) {
-      if (side === "L") {
-        const lx = spec.labelXL;
-        out += `<polyline class="lead-line" data-id="${l.id}" points="${l.ax},${l.ay} ${lx + 18},${l.y} ${lx + 4},${l.y}"/>`;
-        out += `<rect class="hit" data-id="${l.id}" x="0" y="${l.y - 10}" width="${lx + 4}" height="20"/>`;
-        out += `<text class="lbl" data-id="${l.id}" x="${lx}" y="${l.y + 4.5}" text-anchor="end">${l.text}</text>`;
-      } else {
-        const lx = spec.labelX;
-        out += `<polyline class="lead-line" data-id="${l.id}" points="${l.ax},${l.ay} ${lx - 18},${l.y} ${lx - 4},${l.y}"/>`;
-        out += `<rect class="hit" data-id="${l.id}" x="${lx - 4}" y="${l.y - 10}" width="${W - lx + 4}" height="20"/>`;
-        out += `<text class="lbl" data-id="${l.id}" x="${lx}" y="${l.y + 4.5}">${l.text}</text>`;
-      }
-    }
-  }
-  return out + "</svg>";
-}
-
-// ─────────────────────────── 석등 (팔각 석등 부재도) ───────────────────────────
-function lantern() {
-  const cx = 230, parts = [];
-  const add = (id, svg, anchor, side = "R", extra = {}) => parts.push({ id, svg, anchor, side, ...extra });
-  // 보주
-  add("boju", `<ellipse cx="${cx}" cy="52" rx="12" ry="19"/><path d="M${cx - 8} 44 q8 8 16 0 M${cx - 9} 54 q9 8 18 0 M${cx - 7} 64 q7 6 14 0" fill="none"/>` + R(cx - 7, 70, 14, 8), [cx + 11, 46]);
-  // 옥개석(지붕돌)과 그 위의 우동·처마
-  add("lt_okgae", Poly([[cx - 106, 130], [cx - 56, 146], [cx + 56, 146], [cx + 106, 130], [cx + 36, 84], [cx - 36, 84]]), [cx - 84, 124], "L");
-  add("udong", `<path d="M${cx + 36} 84 L${cx + 106} 130"/><path d="M${cx - 36} 84 L${cx - 106} 130"/>`, [cx + 74, 106], "R", { cls: "line" });
-  add("cheoma", `<path d="M${cx - 106} 130 L${cx - 56} 146 L${cx + 56} 146 L${cx + 106} 130"/>`, [cx + 90, 138], "R", { cls: "line" });
-  // 화사석과 화창
-  add("hwasaseok", R(cx - 52, 146, 104, 98) + `<path d="M${cx - 18} 146 V244 M${cx + 18} 146 V244" fill="none"/>`, [cx - 50, 200], "L");
-  add("hwachang", R(cx - 42, 168, 18, 56, `rx="2"`) + R(cx + 24, 168, 18, 56, `rx="2"`), [cx + 33, 196], "R", { cls: "dark" });
-  // 상대석 (연꽃 받침)
-  add("lt_sangdae", R(cx - 78, 244, 156, 12) + Poly([[cx - 76, 256], [cx + 76, 256], [cx + 58, 300], [cx - 58, 300]]) +
-    `<path d="M${cx - 52} 264 q10 20 20 0 M${cx - 20} 264 q10 20 20 0 M${cx + 12} 264 q10 20 20 0 M${cx + 36} 264 q8 16 16 0" fill="none"/>`, [cx - 70, 270], "L");
-  // 간주석(중대석)
-  add("ganjuseok", R(cx - 28, 300, 56, 140) + `<path d="M${cx - 9} 300 V440 M${cx + 9} 300 V440" fill="none"/>`, [cx - 28, 372], "L", { label: "중대석(간주석)" });
-  // 하대석 (엎어 놓은 연꽃)
-  add("lt_hadae", Poly([[cx - 36, 440], [cx + 36, 440], [cx + 96, 492], [cx - 96, 492]]) +
-    `<path d="M${cx - 70} 478 q12 -22 26 0 M${cx - 30} 478 q14 -26 30 0 M${cx + 6} 478 q14 -26 30 0 M${cx + 44} 478 q12 -22 26 0" fill="none"/>`, [cx - 66, 470], "L");
-  // 지대석
-  add("jidaeseok", R(cx - 112, 492, 224, 20), [cx + 100, 502], "R");
-  return build({ title: "석등의 구조", viewBox: [460, 540], parts, labelX: 346, labelXL: 112, labelTop: 40, labelBottom: 520, labelGap: 24 });
-}
 
 // ─────────────────────────── 사찰 가람 배치 (입체 모식도) ───────────────────────────
 // 좌표: a = 진입 방향(일주문→대웅전), l = 좌우, z = 높이. 화면에는 a가 오른쪽 위, l이 오른쪽 아래로 그려진다.
@@ -194,10 +128,8 @@ function iso(sub) {
   return `<svg class="dg dg-iso" viewBox="${vb.join(" ")}" role="img" aria-label="사찰 가람 배치 입체 모식도"><title>사찰 가람 배치 입체 모식도</title>${out}</svg>`;
 }
 
-const BUILDERS = { lantern, temple: iso };
-
 export function renderDiagram(key, opts = {}) {
-  return key === "temple" ? iso(opts.sub) : BUILDERS[key]?.() ?? "";
+  return key === "temple" ? iso(opts.sub) : "";
 }
 
 // svg 안에서 용어 하이라이트 (금색 엣지 + 나머지 반투명)

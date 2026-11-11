@@ -14,7 +14,7 @@ test("모든 용어 id가 고유하고 관련 용어가 실재한다", () => {
 });
 
 test("도면·3D에 쓰인 id가 모두 용어집에 있다", () => {
-  for (const k of ["lantern", "temple"])
+  for (const k of ["temple"])
     for (const id of idsInDiagram(renderDiagram(k))) assert.ok(TERM_BY_ID[id], `${k}: ${id}`);
   for (const id of IDS_3D) assert.ok(TERM_BY_ID[id], id);
 });

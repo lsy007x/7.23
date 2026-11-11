@@ -10,15 +10,15 @@ export const SOURCE_DRAFT = "TAMSAEK-H 편집 초안 (국가유산청 표준 용
 export const CATEGORIES = [
   { id: "stone", name: "석조문화유산", subs: [
     { id: "pagoda", name: "석탑", figs: ["pagoda"] },
-    { id: "lantern", name: "석등", diagram: "lantern" },
+    { id: "lantern", name: "석등", figs: ["lantern"] },
     { id: "budo", name: "부도", figs: ["budo"] },
     { id: "stele", name: "석비", figs: ["stele"] },
     { id: "diag", name: "보존 진단" },
   ]},
   { id: "wood", name: "목조문화유산", subs: [
     { id: "frame", name: "량가 구조 (3D)", diagram: "model3d" },
-    { id: "jusimpo", name: "주심포 · 봉정사 극락전", figs: ["geungnak1", "geungnak2"] },
-    { id: "dapo", name: "다포 · 봉정사 대웅전", figs: ["daeung1", "daeung2"] },
+    { id: "jusimpo", name: "주심포", figs: ["geungnak1", "geungnak2"] },
+    { id: "dapo", name: "다포", figs: ["daeung1", "daeung2"] },
     { id: "giwa", name: "지붕 · 기와", figs: ["giwa"] },
   ]},
   { id: "buddha", name: "불상", subs: [

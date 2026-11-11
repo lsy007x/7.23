@@ -39,7 +39,7 @@ export function mountFigure(root, key, onPick) {
   const inner = root.querySelector(".pfig-inner");
   const svg = root.querySelector(".pfig-ov");
   const steps = [1, 1.6, 2.4, 3.4];
-  let z = f.w >= 1000 ? 2 : 0;
+  let z = f.w >= 1000 && f.w > f.h * 1.2 ? 2 : 0; // 가로로 긴 도면만 처음부터 확대
   const apply = () => { inner.style.width = `${steps[z] * 100}%`; };
   apply();
   root.querySelector(".zoom").addEventListener("click", (e) => {
