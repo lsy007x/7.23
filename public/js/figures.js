@@ -6,7 +6,7 @@ const DOC = "부록 「석조·목조 문화재 부재 명칭」 (사용자 제�
 
 export const FIGURES = {
   lantern: {
-    title: "석등 부재도", src: "img/fig-lantern.png", w: 1100, h: 972, credit: "사용자 제공 이미지(문서). 이용 허락 확인 필요",
+    title: "석등 부재도", src: "img/fig-lantern.webp", w: 1100, h: 972, credit: "사용자 제공 이미지(문서). 이용 허락 확인 필요",
     spots: [
       ["보주", [856, 44, 72, 36], [[556, 92]]],
       ["우동", [860, 142, 160, 40], [[672, 176]]],
@@ -22,7 +22,7 @@ export const FIGURES = {
   },
 
   pagoda: {
-    title: "석탑의 부재 설명", src: "img/fig-pagoda.png", w: 510, h: 820, credit: DOC,
+    title: "석탑의 부재 설명", src: "img/fig-pagoda.webp", w: 510, h: 820, credit: DOC,
     spots: [
       ["상륜부", [50, 108, 32, 56], [[238, 27], [238, 78], [238, 160], [240, 233], [240, 254]]],
       ["탑신부", [50, 342, 32, 56], [[238, 300], [238, 400], [238, 470]]],
@@ -58,7 +58,7 @@ export const FIGURES = {
   },
 
   budo: {
-    title: "부도의 부재 설명", src: "img/fig-budo.png", w: 361, h: 395, credit: DOC,
+    title: "부도의 부재 설명", src: "img/fig-budo.webp", w: 361, h: 395, credit: DOC,
     spots: [
       ["상륜부", [17, 53, 46, 16], [[186, 27], [186, 64], [186, 96]]],
       ["탑신부", [17, 135, 46, 16], [[186, 136], [186, 172]]],
@@ -82,7 +82,7 @@ export const FIGURES = {
   },
 
   stele: {
-    title: "석비의 세부 명칭", src: "img/fig-stele.jpg", w: 797, h: 1000, credit: DOC,
+    title: "석비의 세부 명칭", src: "img/fig-stele.webp", w: 797, h: 1000, credit: DOC,
     spots: [
       ["이수", [26, 106, 62, 44], [[430, 48], [445, 130], [510, 141]]],
       ["비신", [26, 410, 62, 44], [[373, 421]]],
@@ -108,7 +108,7 @@ export const FIGURES = {
   },
 
   buddha: {
-    title: "불상의 부재 설명", src: "img/fig-buddha.jpg", w: 822, h: 1000, credit: DOC,
+    title: "불상의 부재 설명", src: "img/fig-buddha.webp", w: 822, h: 1000, credit: DOC,
     spots: [
       ["광배", [20, 278, 54, 44], [[417, 38], [470, 120], [568, 262]]],
       ["불신", [745, 366, 54, 44], [[418, 178], [414, 313], [316, 422]]],
@@ -143,7 +143,7 @@ export const FIGURES = {
   },
 
   giwa: {
-    title: "기와의 종류와 명칭", src: "img/fig-giwa.jpg", w: 1000, h: 792, credit: DOC,
+    title: "기와의 종류와 명칭", src: "img/fig-giwa.webp", w: 1000, h: 792, credit: DOC,
     spots: [
       ["치미", [577, 63, 40, 18], [[742, 71]]],
       ["마룻장기와", [535, 97, 82, 18], [[798, 115]]],
@@ -168,7 +168,7 @@ export const FIGURES = {
   },
 
   geungnak1: {
-    title: "주심포계 부재 명칭도 1 (정면 및 횡단면도)", src: "img/fig-jusimpo-1.jpg", w: 1000, h: 605, credit: DOC,
+    title: "주심포계 부재 명칭도 1 (정면 및 횡단면도)", src: "img/fig-jusimpo-1.webp", w: 1000, h: 605, credit: DOC,
     spots: [
       ["머거불", [3, 48, 52, 13], [[91, 54]]],
       ["당골", [3, 65, 52, 13], [[88, 71]]],
@@ -237,7 +237,7 @@ export const FIGURES = {
   },
 
   geungnak2: {
-    title: "주심포계 부재 명칭도 2 (측면 및 종단면도)", src: "img/fig-jusimpo-2.jpg", w: 1000, h: 687, credit: DOC,
+    title: "주심포계 부재 명칭도 2 (측면 및 종단면도)", src: "img/fig-jusimpo-2.webp", w: 1000, h: 687, credit: DOC,
     spots: [
       ["기와이기", [196, 110, 64, 12], [[264, 238]]],
       ["강회다짐", [196, 124, 64, 12], [[264, 245]]],
@@ -316,7 +316,7 @@ export const FIGURES = {
   },
 
   daeung1: {
-    title: "다포계 부재 명칭도 1 (정면 및 횡단면도)", src: "img/fig-dapo-1.jpg", w: 1000, h: 598, credit: DOC,
+    title: "다포계 부재 명칭도 1 (정면 및 횡단면도)", src: "img/fig-dapo-1.webp", w: 1000, h: 598, credit: DOC,
     spots: [
       ["종도리", [346, 8, 36, 10], [[404, 116]]],
       ["장혀", [346, 23, 36, 10], [[400, 125]]],
@@ -399,7 +399,7 @@ export const FIGURES = {
   },
 
   daeung2: {
-    title: "다포계 부재 명칭도 2 (측면 및 종단면도)", src: "img/fig-dapo-2.jpg", w: 1000, h: 716, credit: DOC,
+    title: "다포계 부재 명칭도 2 (측면 및 종단면도)", src: "img/fig-dapo-2.webp", w: 1000, h: 716, credit: DOC,
     spots: [
       ["중심목", [410, 8, 46, 10], [[477, 121]]],
       ["종도리", [410, 23, 46, 10], [[484, 129]]],
