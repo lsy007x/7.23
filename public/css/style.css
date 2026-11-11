@@ -132,19 +132,13 @@ button { cursor: pointer; }
 .cat-card:active { background: var(--surface-2); transform: scale(.985); }
 .c-stone { --c: var(--c-stone); } .c-wood { --c: var(--c-wood); } .c-buddha { --c: var(--c-buddha); } .c-temple { --c: var(--c-temple); }
 
-.hero-card { display: block; position: relative; padding: 22px 20px 20px; border-radius: 20px; background: var(--accent); color: #fff; text-decoration: none; overflow: hidden; isolation: isolate; transition: transform .12s; }
-.hero-card:active { transform: scale(.99); }
-/* 전통 창살(정자살)에서 따온 무늬 */
-.hero-card::after {
-  content: ""; position: absolute; inset: 0 0 0 38%; z-index: -1; opacity: .2;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M0 .5h36M.5 0v36M9.5 9.5h17v17h-17z' fill='none' stroke='%23fff'/%3E%3C/svg%3E");
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 70%); mask-image: linear-gradient(90deg, transparent, #000 70%);
-}
-.hero-card .tag-ai { display: inline-block; padding: 2px 9px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .06em; }
-.hero-card h2 { margin: 14px 0 8px; font-family: var(--font-serif); font-size: 24px; font-weight: 700; line-height: 1.32; }
-.hero-card p { max-width: 17em; margin: 0 0 18px; font-size: 14px; line-height: 1.55; opacity: .86; }
-.pill { display: inline-flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 12px 0 18px; border-radius: 999px; background: #fff; color: var(--accent); font-weight: 700; font-size: 14.5px; }
-.pill .chev { width: 16px; height: 16px; stroke: var(--accent); }
+.hero-card { display: block; padding: 20px 20px 18px; border-radius: var(--r-card); background: var(--accent-soft); color: var(--ink); text-decoration: none; transition: background .15s, transform .12s; }
+.hero-card:active { background: #e0eae6; transform: scale(.995); }
+.hero-card .tag-ai { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--accent); }
+.hero-card h2 { margin: 6px 0 6px; font-size: 20px; font-weight: 700; line-height: 1.35; letter-spacing: -.01em; }
+.hero-card p { margin: 0 0 16px; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.pill { display: inline-flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 12px 0 18px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; font-size: 14.5px; }
+.pill .chev { width: 16px; height: 16px; stroke: #fff; }
 .mini-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
 .mini { position: relative; display: flex; flex-direction: column; gap: 4px; min-height: 92px; padding: 16px 14px 14px; border-radius: var(--r-card); background: var(--surface); border: 1px solid var(--line); text-decoration: none; transition: background .15s; }
 .mini:active { background: var(--surface-2); }

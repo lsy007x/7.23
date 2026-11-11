@@ -128,7 +128,7 @@ function pageHome() {
     <h2 class="label">도구</h2>
     <a class="hero-card" href="#/ai/tag">
       <span class="tag-ai">AI 판독</span>
-      <h2>사진 한 장으로<br />부재 이름 찾기</h2>
+      <h2>사진 한 장으로 부재 이름 찾기</h2>
       <p>답사 사진이나 도면을 올리면 용어집에서 이름을 찾아 드려요.</p>
       <span class="pill">사진 올리기${CHEVRON}</span>
     </a>
