@@ -37,3 +37,17 @@ for (const st of STRUCTURES) {
 test("3D 부재 id가 모두 용어집에 있다", () => {
   for (const id of IDS_3D) assert.ok(TERM_BY_ID[id], id);
 });
+
+test("검수본 정의: 모든 키가 용어집에 있고 설명이 반영된다", async () => {
+  const { DEFINITIONS } = await import("../public/js/definitions.js");
+  const { TERM_BY_NAME } = await import("../public/js/data.js");
+  assert.ok(Object.keys(DEFINITIONS).length >= 264);
+  for (const [name, d] of Object.entries(DEFINITIONS)) {
+    const t = TERM_BY_NAME[name];
+    assert.ok(t, `용어집에 없음: ${name}`);
+    assert.equal(t.desc, d.desc, `${name} 설명 미반영`);
+    assert.ok(t.source.startsWith("사용자 검수본"), `${name} 출처`);
+    if (d.hanja) assert.equal(t.hanja, d.hanja);
+    assert.ok(!/[:：]\s*$/.test(d.desc) && d.desc.length > 5, `${name} 설명 형식`);
+  }
+});

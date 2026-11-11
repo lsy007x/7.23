@@ -37,6 +37,7 @@ function t(id, name, hanja, cat, sub, short, desc, related = [], aliases = []) {
 }
 
 import { STRUCTURES, STRUCT_SOURCE, termIdOf } from "./structures.js";
+import { DEFINITIONS } from "./definitions.js";
 
 const DOC_SRC = "부록 「석조·목조 문화재 부재 명칭」(사용자 제공)";
 const withSource = (source, term) => ({ ...term, source });
@@ -619,6 +620,18 @@ TERMS.push(
     source: STRUCT_SOURCE,
   })),
 );
+
+// 사용자 검수본(definitions.js)의 정의·한자·출처로 덮어쓴다
+{
+  const byName = new Map(TERMS.map((t) => [t.name, t]));
+  for (const [name, d] of Object.entries(DEFINITIONS)) {
+    const t = byName.get(name);
+    if (!t) continue;
+    t.desc = d.desc;
+    if (d.hanja) t.hanja = d.hanja;
+    t.source = d.source;
+  }
+}
 
 export const TERM_BY_ID = Object.fromEntries(TERMS.map((x) => [x.id, x]));
 export const catName = (id) => CATEGORIES.find((c) => c.id === id)?.name ?? id;

@@ -169,12 +169,12 @@ async function pageDiagram(catId, subId, sel) {
   function showStruct(key) {
     curStruct = key;
     const st = STRUCT_BY_KEY[key];
+    const desc = TERM_BY_ID[termIdOf(st)]?.desc ?? st.desc; // 용어집(검수본 반영)의 정의를 그대로 보여 준다
     view.querySelectorAll("#structPills button").forEach((b) => { const on = b.dataset.struct === key; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
     view.querySelector("#structBody").innerHTML = `<h3>${esc(st.label)}<span class="badge">도리 ${st.count}개</span></h3>
       <dl class="facts"><div><dt>고주</dt><dd>${esc(st.goju)}</dd></div><div><dt>특징</dt><dd>${esc(st.summary)}</dd></div></dl>
-      <p>${esc(st.desc)}</p>
-      ${st.use && st.use !== "확인 필요" ? `<p class="use"><b>쓰임</b> ${esc(st.use)}</p>` : ""}
-      ${st.unsure ? `<p class="notice">참고 도식의 표시를 옮긴 것으로, 정확한 정의는 표준 용어집으로 확인이 필요해요.</p>` : ""}
+      <p>${esc(desc)}</p>
+      ${st.use && !desc.includes(st.use) ? `<p class="use"><b>쓰임</b> ${esc(st.use)}</p>` : ""}
       <a class="btn" href="#/t/${termIdOf(st)}">용어 정의 보기</a>`;
     view.querySelector(`#structPills [data-struct="${key}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
   }

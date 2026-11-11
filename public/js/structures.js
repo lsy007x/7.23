@@ -1,6 +1,6 @@
 // 전통 건축 구조(량가) 12종: 참고 도식(문서 첨부 '량가 구조 도식')을 바탕으로 한 개략 모델 데이터.
 // 단면(앞→뒤 = z, 높이 = y)을 이 파일에서 계산하고, model3d.js가 그 단면을 정면 3칸으로 늘려 3D로 만든다.
-// ⚠ 치수는 개략 비례이며 실제 건물의 실측이 아님. 설명 문구는 편집 초안(표준 용어집 검수 필요).
+// ⚠ 치수는 개략 비례이며 실제 건물의 실측이 아님. 설명 문구는 definitions.js(사용자 검수본)가 있으면 그 내용으로 바뀐다.
 
 const H_COL = 3.0; // 평주 높이
 const Y0 = 3.3; // 주심도리 높이
@@ -21,9 +21,8 @@ export const STRUCTURES = [
     key: "pyeongsaryang", label: "평사량", name: "평사량", count: 3, goju: "없음",
     aliases: [], build: { m: 1, step: 3, slope: 0.85, special: "pyeongsa" },
     summary: "삼량 계열, 합장으로 종도리를 받음",
-    desc: "참고 도식에서는 삼량과 같이 도리가 3개이되, 종도리를 대공 대신 ㅅ자로 세운 경사재(합장)가 받는 모양으로 그려져 있다. 도식의 표시만 옮긴 것이어서 정확한 정의는 표준 용어집으로 확인이 필요하다.",
-    use: "확인 필요",
-    unsure: true,
+    desc: "종도리와 중도리 사이를 대공 대신 경사재(합장/斜材)를 ㅅ자 모양으로 세워 지붕 하중을 경사 수직 방향으로 전달하도록 짜인 량가 구조.",
+    use: "",
   },
   {
     key: "oryang", label: "오량", termId: "ryang5", name: "5량가", count: 5, goju: "없음",
@@ -36,9 +35,8 @@ export const STRUCTURES = [
     key: "banoryang", label: "반오량", name: "반오량", count: 3, goju: "고주 1열(뒤)",
     build: { special: "banoryang" },
     summary: "오량의 한쪽 지붕면만 있는 구조",
-    desc: "참고 도식에서는 오량을 반으로 나눈 것처럼, 지붕면이 한쪽(앞쪽)에만 있고 높은 고주가 종도리를 받는 모양으로 그려져 있다. 도식의 표시만 옮긴 것이어서 정확한 정의는 표준 용어집으로 확인이 필요하다.",
-    use: "확인 필요",
-    unsure: true,
+    desc: "맞배지붕 형태가 아닌 한쪽 틔움 구조나 외길 지붕 형태에서 5량가 구조의 절반(앞쪽 지붕면)만 형성하고 고주가 종도리를 받치는 가구(架構) 방식.",
+    use: "",
   },
   {
     key: "iljugo5", label: "일고주오량", termId: "il_goju_5ryang", name: "1고주 5량가", count: 5, goju: "1열(앞)",
@@ -72,9 +70,8 @@ export const STRUCTURES = [
     key: "simgo7", label: "심고주칠량", name: "심고주 7량가", count: 7, goju: "가운데 1열",
     aliases: ["심고주칠량"], build: { m: 3, step: 1.5, slope: 0.72, mode: "center" },
     summary: "가운데 높은 고주가 종도리를 받음",
-    desc: "건물 한가운데에 종도리까지 닿는 높은 고주(심고주)를 세운 7량가. 대공 없이 고주가 종도리를 직접 받는다.",
-    use: "확인 필요",
-    unsure: true,
+    desc: "건물 평면의 중앙 중심선에 최상부 종도리까지 닿는 높은 기둥(심고주)을 세워 대공 없이 종도리를 직접 받치도록 짠 7량 지붕 뼈대 구조.",
+    use: "",
   },
   {
     key: "guryang", label: "구량", name: "9량가", count: 9, goju: "없음",
