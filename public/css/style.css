@@ -139,7 +139,7 @@ h1.page { font-family: var(--font-serif); font-size: 24px; margin: 18px 0 4px; }
 .section-title { font-size: 13px; font-weight: 700; color: var(--ink-2); margin: 22px 0 4px; letter-spacing: .04em; }
 
 /* ───── 인터랙티브 도면 ───── */
-.figure { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin: 12px 0; overflow: hidden; position: relative; }
+.figure { scroll-margin-top: 175px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin: 12px 0; overflow: hidden; position: relative; }
 .figure svg { display: block; width: 100%; height: auto; touch-action: manipulation; }
 .figure .hint { position: absolute; left: 10px; top: 8px; font-size: 12px; color: var(--ink-2); pointer-events: none; }
 .dg .part { fill: var(--part); stroke: var(--part-stroke); stroke-width: 1.2; cursor: pointer; transition: opacity .2s, filter .2s; }
@@ -216,3 +216,24 @@ h1.page { font-family: var(--font-serif); font-size: 24px; margin: 18px 0 4px; }
 .composer textarea { flex: 1; resize: none; border: 1.5px solid var(--accent); border-radius: 12px; padding: 10px 12px; background: var(--surface); font-size: 16px; min-height: 48px; max-height: 120px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ───── 원본 도면 뷰어 (사용자 제공 부록) ───── */
+.figure-photo { background: #fff; }
+.seg { display: flex; gap: 4px; padding: 6px; background: var(--surface-2); overflow-x: auto; scrollbar-width: none; }
+.seg button { flex: 1 0 auto; border: 0; background: transparent; border-radius: 8px; padding: 6px 10px; font-size: 13px; min-height: 36px; color: var(--ink-2); white-space: nowrap; }
+.seg button.on { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.pfig-scroll { max-height: 68vh; overflow: auto; -webkit-overflow-scrolling: touch; background: #fff; overscroll-behavior: contain; }
+.pfig-inner { position: relative; width: 100%; }
+.pfig-inner img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; }
+.pfig-ov { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pfig-ov .fhit { fill: transparent; cursor: pointer; }
+.pfig-ov .dim { fill: rgba(24, 18, 10, 0); transition: fill .25s; pointer-events: none; }
+.pfig-ov.focus .dim { fill: rgba(24, 18, 10, .5); }
+.pfig-ov .marks { pointer-events: none; }
+.pfig-ov .gbox { fill: none; stroke: #d4a017; stroke-width: 2.5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 3px rgba(212,160,23,.9)); }
+.pfig-ov .gpt { fill: rgba(212,160,23,.18); stroke: #d4a017; stroke-width: 3; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 4px rgba(212,160,23,.9)); }
+.pfig-ov .gline { stroke: #d4a017; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.pfig-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border-top: 1px solid var(--line); background: var(--surface); }
+.pfig-cap { font-size: 12px; color: var(--ink-2); line-height: 1.35; }
+.zoom { display: flex; gap: 6px; flex: none; }
+.zoom button { width: 40px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 18px; line-height: 1; }

@@ -1,6 +1,9 @@
 import { CATEGORIES, TERMS, TERM_BY_ID, catName, subName } from "./data.js";
 import { searchTerms, retrieve } from "./rag.js";
 import { renderDiagram, highlight, idsInDiagram } from "./diagrams.js";
+import { renderFigure, mountFigure, figureTermIds } from "./figview.js";
+import { IDS_3D } from "./model3d.js";
+import { FIGURES } from "./figures.js";
 
 const view = document.getElementById("view");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -38,11 +41,14 @@ function termList(terms) {
   if (!terms.length) return `<p class="placeholder">해당하는 용어가 없습니다.</p>`;
   return `<ul class="term-list">${terms.map((t) => `<li><a href="#/t/${t.id}"><b>${esc(t.name)}</b>${t.hanja ? `<span class="h">${esc(t.hanja)}</span>` : ""}<p>${esc(t.short)}</p></a></li>`).join("")}</ul>`;
 }
+// 용어 id → 그 용어가 표시된 도면(소주제) 경로
+const ROUTES = {};
+for (const c of CATEGORIES) for (const s of c.subs) {
+  const ids = s.figs ? s.figs.flatMap(figureTermIds) : s.diagram === "model3d" ? IDS_3D : s.diagram ? idsInDiagram(renderDiagram(s.diagram)) : [];
+  for (const id of ids) ROUTES[id] ??= `#/c/${c.id}/${s.id}`;
+}
 function diagramRoute(t) {
-  const cat = CATEGORIES.find((c) => c.id === t.cat);
-  // 목조 frame 용어는 3D, 그 외는 같은 소주제의 도면
-  const sub = cat?.subs.find((s) => s.id === t.sub);
-  return sub ? `#/c/${t.cat}/${t.sub}?sel=${t.id}` : null;
+  return ROUTES[t.id] ? `${ROUTES[t.id]}?sel=${t.id}` : null;
 }
 function photoUrl(t) {
   return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${t.name} ${t.hanja || ""} ${catName(t.cat)}`.trim())}`;
@@ -96,27 +102,33 @@ async function pageDiagram(catId, subId, sel) {
   const s = c?.subs.find((x) => x.id === subId);
   if (!s) return pageNotFound();
   const is3D = s.diagram === "model3d";
+  const figs = s.figs || [];
+  const hasFigure = is3D || figs.length || s.diagram;
   const subTerms = TERMS.filter((t) => t.cat === catId && t.sub === subId);
+  const figLabel = (k) => FIGURES[k].title.match(/\((.+)\)/)?.[1] ?? FIGURES[k].title;
+
+  let figureHTML = "";
+  if (is3D) figureHTML = `<div class="stage" id="stage"><div class="loading" id="loading"><span><span class="spinner"></span><br/>3D 모델 불러오는 중…</span></div>
+          <div class="tools"><button type="button" id="roof">지붕</button><button type="button" id="reset">해제</button></div></div>`;
+  else if (figs.length) figureHTML = `${figs.length > 1 ? `<div class="seg" id="figtabs">${figs.map((k, i) => `<button type="button" data-fig="${k}" class="${i ? "" : "on"}">${esc(figLabel(k))}</button>`).join("")}</div>` : ""}<div id="figbox"></div>`;
+  else if (s.diagram) figureHTML = `<span class="hint">부재나 이름을 탭하세요</span>${renderDiagram(s.diagram)}`;
 
   view.innerHTML = `${header(c.id, c.name)}
     <nav class="sub-grid">${c.subs.map((x) => `<a href="#/c/${c.id}/${x.id}" class="${x.id === subId ? "on" : ""}">${x.name}</a>`).join("")}</nav>
-    <div class="figure" id="fig">${is3D
-      ? `<div class="stage" id="stage"><div class="loading" id="loading"><span><span class="spinner"></span><br/>3D 모델 불러오는 중…</span></div>
-          <div class="tools"><button type="button" id="roof">지붕</button><button type="button" id="reset">해제</button></div></div>`
-      : `<span class="hint">부재나 이름을 탭하세요</span>${renderDiagram(s.diagram)}`}</div>
-    <div class="chips" id="chips"></div>
+    ${hasFigure ? `<div class="figure${figs.length ? " figure-photo" : ""}" id="fig">${figureHTML}</div>` : ""}
+    ${hasFigure ? `<div class="chips" id="chips"></div>` : `<div id="chips" hidden></div>${termList(subTerms)}`}
     <article class="detail" id="detail" hidden aria-live="polite"></article>
-    <p class="placeholder" id="ph">${is3D ? "모델을 돌려 보고(한 손가락 회전·두 손가락 확대) 부재를 탭하세요." : "도면에서 부재를 탭하면 금색으로 강조되고 설명이 나타납니다."}</p>`;
+    ${hasFigure ? `<p class="placeholder" id="ph">${is3D ? "모델을 돌려 보고(한 손가락 회전·두 손가락 확대) 부재를 탭하세요." : figs.length ? "도면의 부재나 이름을 탭하면 금색으로 강조되고 설명이 나타납니다. ＋/− 로 확대하고 손가락으로 움직여 보세요." : "도면에서 부재를 탭하면 금색으로 강조되고 설명이 나타납니다."}</p>` : `<p id="ph" hidden></p>`}`;
   bindSearch(view);
 
   const chips = view.querySelector("#chips");
   const detail = view.querySelector("#detail");
   const ph = view.querySelector("#ph");
-  let ids;
-  let selectFn;
+  let ids = [];
+  let selectFn = () => false;
 
   if (is3D) {
-    const { mountModel, IDS_3D } = await import("./model3d.js");
+    const { mountModel } = await import("./model3d.js");
     ids = IDS_3D;
     const names = Object.fromEntries(ids.map((i) => [i, TERM_BY_ID[i]?.name]));
     try {
@@ -133,15 +145,32 @@ async function pageDiagram(catId, subId, sel) {
       console.error(e);
       const ld = view.querySelector("#loading");
       if (ld) ld.textContent = "3D를 불러오지 못했습니다. 네트워크 연결(three.js CDN)과 WebGL 지원 여부를 확인하세요.";
-      selectFn = () => false;
     }
-  } else {
+  } else if (figs.length) {
+    // 원본 도면(사용자 제공 부록). 소주제에 도면이 여러 장이면 탭으로 전환
+    const box = view.querySelector("#figbox");
+    const tabs = view.querySelector("#figtabs");
+    let cur, viewer;
+    const show = (k) => {
+      cur = k;
+      box.innerHTML = renderFigure(k);
+      viewer = mountFigure(box.firstElementChild, k, (id) => choose(id));
+      tabs?.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.fig === k));
+    };
+    tabs?.addEventListener("click", (e) => { const b = e.target.closest("[data-fig]"); if (b && b.dataset.fig !== cur) { show(b.dataset.fig); choose(null); } });
+    show(figs[0]);
+    ids = [...new Set(figs.flatMap(figureTermIds))];
+    selectFn = (id) => {
+      if (id && !figureTermIds(cur).includes(id)) { const other = figs.find((k) => figureTermIds(k).includes(id)); if (other) show(other); }
+      return viewer.select(id);
+    };
+  } else if (s.diagram) {
     const svg = view.querySelector("#fig svg");
     ids = idsInDiagram(svg.outerHTML);
     selectFn = (id) => highlight(svg, id);
     svg.addEventListener("click", (e) => {
       const el = e.target.closest("[data-id]");
-      choose(el && !el.dataset.id.startsWith("_") ? el.dataset.id : null);
+      choose(el ? el.dataset.id : null);
     });
   }
   // 이 페이지의 용어 칩: 도면에 있는 용어 + 소주제 용어(사찰은 소주제 필터)
@@ -157,13 +186,16 @@ async function pageDiagram(catId, subId, sel) {
     const t = id && TERM_BY_ID[id];
     const shown = t ? selectFn(id) : selectFn(null);
     chips.querySelectorAll(".chip").forEach((b) => b.classList.toggle("on", b.dataset.pick === id));
-    if (!t) { detail.hidden = true; ph.hidden = false; return; }
-    detail.innerHTML = detailHTML(t, { showMapLink: false }) + (shown === false ? `<p class="notice">이 도면에는 해당 부재가 따로 표시되어 있지 않습니다.</p>` : "");
+    if (!t) { detail.hidden = true; ph.hidden = !hasFigure; return; }
+    detail.innerHTML = detailHTML(t, { showMapLink: !hasFigure }) + (hasFigure && shown === false ? `<p class="notice">이 도면에는 해당 부재가 따로 표시되어 있지 않습니다.</p>` : "");
     detail.hidden = false; ph.hidden = true;
     history.replaceState(null, "", `#/c/${catId}/${subId}?sel=${id}`);
-    if (scroll) view.querySelector("#fig").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (scroll) view.querySelector(hasFigure ? "#fig" : "#detail").scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  if (sel) choose(sel);
+  if (sel) {
+    choose(sel);
+    if (hasFigure) setTimeout(() => view.querySelector("#fig")?.scrollIntoView({ block: "start" }), 60);
+  }
 }
 
 function pageTerm(id) {

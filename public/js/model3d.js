@@ -1,10 +1,7 @@
 // 목조 건축 3D 매핑: 정면 3칸(협칸-어칸-협칸) · 1고주 5량가 · 맞배지붕
 // 단위 m. x = 정면(도리) 방향, z = 측면(보) 방향(앞 z=0 → 뒤 z=6), y = 높이.
-import { MEMBERS } from "./diagrams.js";
-
 // 3D에만 있는 그룹 (그룹 용어 → 구성 부재)
 const GROUPS3D = {
-  ...MEMBERS,
   dori: ["jusimdori", "jungdori", "jongdori"],
   ryang5: ["jusimdori", "jungdori", "jongdori", "daedulbo", "jongbo", "dongjaju", "daegong"],
   ryangga: ["jusimdori", "jungdori", "jongdori", "daedulbo", "jongbo", "dongjaju", "daegong", "toebo", "gooju"],

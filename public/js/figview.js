@@ -1,0 +1,90 @@
+// 원본 도면 이미지 뷰어: 라벨·부재 위치 핫스팟, 금색 하이라이트(나머지 어둡게), 확대/이동
+import { FIGURES } from "./figures.js";
+import { TERM_BY_NAME } from "./data.js";
+
+const idOf = (name) => TERM_BY_NAME[name]?.id;
+
+// 도면에 나오는 용어 id 목록
+export function figureTermIds(key) {
+  return [...new Set(FIGURES[key].spots.map(([n]) => idOf(n)).filter(Boolean))];
+}
+
+export function renderFigure(key) {
+  const f = FIGURES[key];
+  const hits = f.spots.map(([n, [x, y, w, h], pts]) => {
+    const id = idOf(n);
+    return `<rect class="fhit" data-id="${id}" x="${x - 3}" y="${y - 3}" width="${w + 6}" height="${h + 6}"/>` +
+      pts.map(([px, py]) => `<circle class="fhit" data-id="${id}" cx="${px}" cy="${py}" r="9"/>`).join("");
+  }).join("");
+  return `<div class="pfig" data-key="${key}">
+    <div class="pfig-scroll"><div class="pfig-inner">
+      <img src="${f.src}" width="${f.w}" height="${f.h}" alt="${f.title}" draggable="false" />
+      <svg class="pfig-ov" viewBox="0 0 ${f.w} ${f.h}" aria-hidden="true">
+        <defs><mask id="mask-${key}" maskUnits="userSpaceOnUse"><rect width="${f.w}" height="${f.h}" fill="#fff"/><g class="holes"></g></mask></defs>
+        <rect class="dim" width="${f.w}" height="${f.h}" mask="url(#mask-${key})"/>
+        <g class="marks"></g><g class="hits">${hits}</g>
+      </svg>
+    </div></div>
+    <div class="pfig-bar">
+      <span class="pfig-cap">${f.title}</span>
+      <span class="zoom"><button type="button" data-zoom="-1" aria-label="축소">−</button><button type="button" data-zoom="1" aria-label="확대">＋</button></span>
+    </div>
+  </div>`;
+}
+
+// 확대 단계: 가로로 넓은 목조 도면은 처음부터 크게 보여 줌
+export function mountFigure(root, key, onPick) {
+  const f = FIGURES[key];
+  const scroller = root.querySelector(".pfig-scroll");
+  const inner = root.querySelector(".pfig-inner");
+  const svg = root.querySelector(".pfig-ov");
+  const steps = [1, 1.6, 2.4, 3.4];
+  let z = f.w >= 1000 ? 2 : 0;
+  const apply = () => { inner.style.width = `${steps[z] * 100}%`; };
+  apply();
+  root.querySelector(".zoom").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-zoom]");
+    if (!b) return;
+    const cx = (scroller.scrollLeft + scroller.clientWidth / 2) / inner.clientWidth;
+    const cy = (scroller.scrollTop + scroller.clientHeight / 2) / inner.clientHeight;
+    z = Math.max(0, Math.min(steps.length - 1, z + Number(b.dataset.zoom)));
+    apply();
+    scroller.scrollTo(cx * inner.clientWidth - scroller.clientWidth / 2, cy * inner.clientHeight - scroller.clientHeight / 2);
+  });
+  svg.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-id]");
+    onPick(el ? el.dataset.id : null);
+  });
+
+  function select(id) {
+    const holes = svg.querySelector(".holes");
+    const marks = svg.querySelector(".marks");
+    const spots = id ? f.spots.filter(([n]) => idOf(n) === id) : [];
+    svg.classList.toggle("focus", spots.length > 0);
+    let h = "", m = "";
+    const pts = [];
+    for (const [, [x, y, w, hh], ps] of spots) {
+      const box = `x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${hh + 8}" rx="4"`;
+      h += `<rect ${box} fill="#000"/>`;
+      m += `<rect class="gbox" ${box}/>`;
+      for (const [px, py] of ps) {
+        const ax = px < x ? x - 4 : px > x + w ? x + w + 4 : px;
+        const ay = py < y ? y - 4 : py > y + hh ? y + hh + 4 : py;
+        h += `<circle cx="${px}" cy="${py}" r="16" fill="#000"/>`;
+        m += `<line class="gline" x1="${ax}" y1="${ay}" x2="${px}" y2="${py}"/><circle class="gpt" cx="${px}" cy="${py}" r="11"/>`;
+        pts.push([px, py]);
+      }
+      if (!ps.length) pts.push([x + w / 2, y + hh / 2]);
+    }
+    holes.innerHTML = h;
+    marks.innerHTML = m;
+    if (spots.length) {
+      // 선택한 부재가 화면 가운데 오도록 스크롤
+      const [sx, sy] = pts.reduce((a, p) => [a[0] + p[0] / pts.length, a[1] + p[1] / pts.length], [0, 0]);
+      const k = inner.clientWidth / f.w;
+      scroller.scrollTo({ left: sx * k - scroller.clientWidth / 2, top: sy * k - scroller.clientHeight / 2, behavior: "smooth" });
+    }
+    return spots.length > 0;
+  }
+  return { select };
+}
