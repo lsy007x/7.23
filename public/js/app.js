@@ -10,11 +10,13 @@ const view = document.getElementById("view");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 let cleanup = null; // 페이지 이탈 시 정리 (3D 렌더러 등)
 const ARROW = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>`;
+const ICON_SEARCH = `<svg class="ic-search" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>`;
+const CHEVRON = `<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`;
 
 // ─────────────────── 공통 조각 ───────────────────
-function searchBox(id, placeholder = "용어를 입력하세요 (예: 고주, 보주)") {
+function searchBox(id, placeholder = "용어 검색 (예: 고주, 보주)") {
   return `<div class="search-wrap"><form class="search" role="search" data-search>
-    <label for="${id}">검색 :</label>
+    <label for="${id}" class="sr-only">용어 검색</label>${ICON_SEARCH}
     <input id="${id}" type="search" enterkeyhint="search" autocomplete="off" placeholder="${placeholder}" />
   </form><ul class="suggest" data-suggest></ul></div>`;
 }
@@ -30,18 +32,17 @@ function bindSearch(root) {
   form.addEventListener("submit", (e) => { e.preventDefault(); location.hash = `#/s/${encodeURIComponent(input.value.trim())}`; });
 }
 function header(cat, here) {
-  return `<header class="top">
-    <div class="top-row"><a class="logo" href="#/">TAMSAEK – H</a></div>
+  // 로고 줄과 검색창은 스크롤되면 올라가고, 대주제 탭만 화면 위에 붙는다
+  return `<header class="top"><a class="logo" href="#/">TAMSAEK – H</a></header>
     <nav class="cat-tabs" aria-label="대주제">
       <a href="#/" class="${!cat ? "on" : ""}">전체</a>
       ${CATEGORIES.map((c) => `<a href="#/c/${c.id}" class="${c.id === cat ? "on" : ""}">${c.name}</a>`).join("")}
     </nav>
-    <div class="page-search">${here ? `<span class="here">${esc(here)}</span>` : ""}${searchBox("q-top")}</div>
-  </header>`;
+    <div class="page-search${here ? " has-here" : ""}">${here ? `<span class="here">${esc(here)}</span>` : ""}${searchBox("q-top")}</div>`;
 }
 function termList(terms) {
   if (!terms.length) return `<p class="placeholder">해당하는 용어가 없습니다.</p>`;
-  return `<ul class="term-list">${terms.map((t) => `<li class="c-${t.cat}"><a href="#/t/${t.id}"><b>${esc(t.name)}</b>${t.hanja ? `<span class="h">${esc(t.hanja)}</span>` : ""}<p>${esc(t.short)}</p></a></li>`).join("")}</ul>`;
+  return `<ul class="term-list">${terms.map((t) => `<li class="c-${t.cat}"><a href="#/t/${t.id}"><div><b>${esc(t.name)}</b>${t.hanja ? `<span class="h">${esc(t.hanja)}</span>` : ""}<p>${esc(t.short)}</p></div>${CHEVRON}</a></li>`).join("")}</ul>`;
 }
 // 용어 id → 그 용어가 표시된 도면(소주제) 경로
 const ROUTES = {};
@@ -62,18 +63,19 @@ const PHOTO_SITE = "https://digital.khs.go.kr/";
 function detailHTML(t, { showMapLink = true } = {}) {
   const rel = t.related.map((r) => TERM_BY_ID[r]).filter(Boolean);
   const map = showMapLink ? diagramRoute(t) : null;
-  return `<h2>${esc(t.name)}${t.hanja ? `<span class="h">${esc(t.hanja)}</span>` : ""}</h2>
+  return `<p class="eyebrow c-${t.cat}"><a href="#/c/${t.cat}">${esc(catName(t.cat))}</a><span>${esc(subName(t.cat, t.sub))}</span></p>
+    <h2>${esc(t.name)}${t.hanja ? `<span class="h">${esc(t.hanja)}</span>` : ""}</h2>
     <p class="short">${esc(t.short)}</p>
     <p class="desc">${esc(t.desc)}</p>
-    ${t.aliases.length ? `<p class="lead">다른 이름 · ${t.aliases.map(esc).join(", ")}</p>` : ""}
+    ${t.aliases.length ? `<p class="alias"><b>다른 이름</b>${t.aliases.map(esc).join(", ")}</p>` : ""}
     ${rel.length ? `<div class="section-title">관련 용어</div><div class="chips">${rel.map((r) => `<a class="chip" href="#/t/${r.id}" data-pick="${r.id}">${esc(r.name)}</a>`).join("")}</div>` : ""}
     <div class="actions">
-      ${map ? `<a class="btn primary" href="${map}">도면·3D에서 위치 보기</a>` : ""}
-      <a class="btn" href="${photoUrl(t)}" target="_blank" rel="noopener">실제 사진 보기 ↗</a>
+      ${map ? `<a class="btn primary wide" href="${map}">도면·3D에서 위치 보기</a>` : ""}
+      <a class="btn" href="${photoUrl(t)}" target="_blank" rel="noopener">실제 사진 보기</a>
       <a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${t.name}에 대해 설명해줘`)}">AI 튜터에게 묻기</a>
     </div>
     <a class="khs-link" href="${PHOTO_SITE}" target="_blank" rel="noopener"><span><b>국가유산 디지털 서비스</b><small>공식 사진·도면·3D 자료</small></span><i class="go">${ARROW}</i></a>
-    <p class="meta">${esc(catName(t.cat))} › ${esc(subName(t.cat, t.sub))} · 출처: ${esc(t.source)}</p>`;
+    <p class="meta">출처 · ${esc(t.source)}</p>`;
 }
 
 // ─────────────────── 페이지 ───────────────────
@@ -101,6 +103,13 @@ function pageHome() {
   bindSearch(view);
 }
 
+// 소주제 카드에 보여 줄 한 줄 정보
+function subCount(catId, subId) {
+  const n = TERMS.filter((t) => t.cat === catId && t.sub === subId).length;
+  const sub = CATEGORIES.find((c) => c.id === catId).subs.find((x) => x.id === subId);
+  const kind = sub.diagram === "model3d" ? "3D 모델" : sub.figs ? `도면 ${sub.figs.length}장` : sub.diagram ? "배치도" : "용어 목록";
+  return `${kind} · 용어 ${n}개`;
+}
 function pageCategory(catId) {
   const c = CATEGORIES.find((x) => x.id === catId);
   if (!c) return pageNotFound();
@@ -108,7 +117,7 @@ function pageCategory(catId) {
   view.innerHTML = `${header(c.id, c.name)}
     <h1 class="page">${c.name}</h1>
     <p class="lead">주제를 고르면 도면에서 부재 위치와 함께 용어를 볼 수 있습니다.</p>
-    <nav class="sub-grid">${c.subs.map((s) => `<a href="#/c/${c.id}/${s.id}">${s.name}</a>`).join("")}</nav>
+    <nav class="sub-list c-${c.id}" aria-label="소주제">${c.subs.map((s) => `<a href="#/c/${c.id}/${s.id}"><b>${s.name}</b><small>${subCount(c.id, s.id)}</small>${CHEVRON}</a>`).join("")}</nav>
     <details class="all-terms"><summary>전체 용어 ${all.length}개 보기</summary>${termList(all)}</details>`;
   bindSearch(view);
 }
@@ -147,7 +156,7 @@ async function pageDiagram(catId, subId, sel) {
     : "건물을 탭하면 금색으로 강조돼요. 다시 탭하면 풀려요.";
 
   view.innerHTML = `${header(c.id, c.name)}
-    <nav class="sub-grid">${c.subs.map((x) => `<a href="#/c/${c.id}/${x.id}" class="${x.id === subId ? "on" : ""}">${x.name}</a>`).join("")}</nav>
+    <nav class="sub-tabs" aria-label="소주제">${c.subs.map((x) => `<a href="#/c/${c.id}/${x.id}" class="${x.id === subId ? "on" : ""}"${x.id === subId ? ' aria-current="page"' : ""}>${x.name}</a>`).join("")}</nav>
     ${hasFigure ? `<div class="figure${figs.length ? " figure-photo" : ""}" id="fig">${figureHTML}</div>
       ${is3D ? structCard() : ""}
       <div class="selbar"><button type="button" class="btn-list" id="openList">용어 목록 <b id="listCount"></b></button><button type="button" class="btn-ghost" id="clearSel" hidden>선택 해제</button></div>`
@@ -155,6 +164,7 @@ async function pageDiagram(catId, subId, sel) {
     <article class="detail" id="detail" hidden aria-live="polite"></article>
     ${hasFigure ? `<p class="placeholder" id="ph">${hint}</p>` : `<p id="ph" hidden></p>`}`;
   bindSearch(view);
+  view.querySelector(".sub-tabs .on")?.scrollIntoView({ block: "nearest", inline: "center" });
 
   const detail = view.querySelector("#detail");
   const ph = view.querySelector("#ph");
@@ -378,7 +388,7 @@ async function runTag(file) {
       ${data.tags.length ? data.tags.map((tg) => {
         const t = TERM_BY_ID[tg.term_id];
         return `<div class="tag-row"><span class="badge ${tg.confidence}">${label[tg.confidence]}</span><div>
-          <a href="#/t/${t.id}">${esc(t.name)}</a> <small class="where">${esc(t.short)}</small><div class="where">📍 ${esc(tg.where)}</div></div></div>`;
+          <a href="#/t/${t.id}">${esc(t.name)}</a> <small class="where">${esc(t.short)}</small><div class="where">위치 · ${esc(tg.where)}</div></div></div>`;
       }).join("") : `<p class="notice">용어집에 있는 부재를 찾지 못했습니다.</p>`}
       ${data.unlisted?.length ? `<p class="where">용어집에 없는 부재: ${data.unlisted.map(esc).join(", ")}</p>` : ""}`;
   } catch (e) {
