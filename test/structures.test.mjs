@@ -51,3 +51,17 @@ test("검수본 정의: 모든 키가 용어집에 있고 설명이 반영된다
     assert.ok(!/[:：]\s*$/.test(d.desc) && d.desc.length > 5, `${name} 설명 형식`);
   }
 });
+
+test("도면 면적(regions.js): 용어 id와 도면이 실재한다", async () => {
+  const { REGIONS } = await import("../public/js/regions.js");
+  const { FIGURES } = await import("../public/js/figures.js");
+  const { TERM_BY_NAME } = await import("../public/js/data.js");
+  for (const [key, byId] of Object.entries(REGIONS)) {
+    assert.ok(FIGURES[key], key);
+    const ids = new Set(FIGURES[key].spots.map(([n]) => TERM_BY_NAME[n]?.id));
+    for (const [id, paths] of Object.entries(byId)) {
+      assert.ok(ids.has(id), `${key}에 ${id} 없음`);
+      assert.ok(paths.length && paths.every((d) => /^M[\d. LZM-]+Z$/.test(d)), `${key}/${id} path 형식`);
+    }
+  }
+});

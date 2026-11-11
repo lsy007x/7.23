@@ -1,6 +1,7 @@
 // 원본 도면 이미지 뷰어: 라벨·부재 위치 핫스팟, 금색 하이라이트(나머지 어둡게), 확대/이동
 import { FIGURES } from "./figures.js";
 import { TERM_BY_NAME } from "./data.js";
+import { REGIONS } from "./regions.js";
 
 const idOf = (name) => TERM_BY_NAME[name]?.id;
 
@@ -61,12 +62,19 @@ export function mountFigure(root, key, onPick) {
     const marks = svg.querySelector(".marks");
     const spots = id ? f.spots.filter(([n]) => idOf(n) === id) : [];
     svg.classList.toggle("focus", spots.length > 0);
+    // 면적을 찾은 부재(regions.js)는 그 칸 전체를 빛나게 하고, 못 찾은 부재는 지시선 끝에 점으로 표시한다
+    const regions = (id && REGIONS[key]?.[id]) || [];
     let h = "", m = "";
     const pts = [];
+    for (const d of regions) {
+      h += `<path d="${d}" fill="#000" fill-rule="evenodd"/>`;
+      m += `<path class="garea" d="${d}" fill-rule="evenodd"/>`;
+    }
     for (const [, [x, y, w, hh], ps] of spots) {
       const box = `x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${hh + 8}" rx="4"`;
       h += `<rect ${box} fill="#000"/>`;
       m += `<rect class="gbox" ${box}/>`;
+      if (regions.length) { pts.push([x + w / 2, y + hh / 2]); continue; }
       for (const [px, py] of ps) {
         const ax = px < x ? x - 4 : px > x + w ? x + w + 4 : px;
         const ay = py < y ? y - 4 : py > y + hh ? y + hh + 4 : py;

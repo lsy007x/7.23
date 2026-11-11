@@ -37,6 +37,7 @@ public/js/definitions.js 검수 엑셀에서 가져온 정의·한자·출처 (t
 public/js/rag.js      검색/문맥 검색 (브라우저·서버 공용)
 public/js/figures.js  원본 도면 9장의 라벨·부재 좌표(핫스팟)
 public/js/figview.js  원본 도면 뷰어(하이라이트·확대)
+public/js/regions.js  부재 면적(윤곽선) — tools/make_regions.py가 생성
 public/js/diagrams.js 사찰 입체 배치도(직접 그린 SVG)
 public/img/           부록에서 추출한 도면 이미지
 public/js/structures.js 량가 12종 단면 데이터와 설명

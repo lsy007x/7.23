@@ -238,6 +238,8 @@ h1.page { font-family: var(--font-serif); font-size: 24px; margin: 18px 0 4px; }
 .pfig-ov .marks { pointer-events: none; }
 .pfig-ov .gbox { fill: none; stroke: #d4a017; stroke-width: 2.5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 3px rgba(212,160,23,.9)); }
 .pfig-ov .gpt { fill: rgba(212,160,23,.18); stroke: #d4a017; stroke-width: 3; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 4px rgba(212,160,23,.9)); }
+.pfig-ov .garea { fill: rgba(212,160,23,.38); stroke: #d4a017; stroke-width: 3; vector-effect: non-scaling-stroke; stroke-linejoin: round; filter: drop-shadow(0 0 5px rgba(212,160,23,.95)) drop-shadow(0 0 12px rgba(212,160,23,.6)); animation: glow 1.6s ease-in-out infinite alternate; }
+@keyframes glow { from { fill: rgba(212,160,23,.28); } to { fill: rgba(212,160,23,.5); } }
 .pfig-ov .gline { stroke: #d4a017; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .pfig-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border-top: 1px solid var(--line); background: var(--surface); }
 .pfig-cap { font-size: 12px; color: var(--ink-2); line-height: 1.35; }
