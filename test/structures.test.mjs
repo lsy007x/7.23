@@ -65,3 +65,16 @@ test("도면 면적(regions.js): 용어 id와 도면이 실재한다", async () 
     }
   }
 });
+
+test("도면 groups(괄호식 이름): 번호가 올바르고 소속 부재가 실재한다", async () => {
+  const { FIGURES } = await import("../public/js/figures.js");
+  let n = 0;
+  for (const [key, f] of Object.entries(FIGURES)) {
+    for (const [gi, members] of Object.entries(f.groups ?? {})) {
+      n++;
+      assert.ok(f.spots[gi], `${key}[${gi}]`);
+      for (const m of members) { assert.ok(f.spots[m], `${key}[${gi}] 소속 ${m}`); assert.notEqual(Number(gi), m); }
+    }
+  }
+  assert.ok(n >= 25);
+});

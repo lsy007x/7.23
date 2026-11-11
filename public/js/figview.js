@@ -60,7 +60,11 @@ export function mountFigure(root, key, onPick) {
   function select(id) {
     const holes = svg.querySelector(".holes");
     const marks = svg.querySelector(".marks");
-    const spots = id ? f.spots.filter(([n]) => idOf(n) === id) : [];
+    const groups = f.groups || {};
+    const own = id ? f.spots.map((_, i) => i).filter((i) => idOf(f.spots[i][0]) === id) : [];
+    // 괄호식 이름은 소속 부재를 함께 보여 준다 (소속 부재는 일반 부재처럼 지시선과 함께)
+    const members = [...new Set(own.flatMap((i) => (i in groups ? groups[i] : [])))].filter((i) => !own.includes(i));
+    const spots = [...own, ...members];
     svg.classList.toggle("focus", spots.length > 0);
     // 면적을 찾은 부재(regions.js)는 그 칸 전체를 빛나게 하고, 못 찾은 부재는 지시선 끝에 점으로 표시한다
     const regions = (id && REGIONS[key]?.[id]) || [];
@@ -70,11 +74,12 @@ export function mountFigure(root, key, onPick) {
       h += `<path d="${d}" fill="#000" fill-rule="evenodd"/>`;
       m += `<path class="garea" d="${d}" fill-rule="evenodd"/>`;
     }
-    for (const [, [x, y, w, hh], ps] of spots) {
+    for (const i of spots) {
+      const [, [x, y, w, hh], ps] = f.spots[i];
       const box = `x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${hh + 8}" rx="4"`;
       h += `<rect ${box} fill="#000"/>`;
       m += `<rect class="gbox" ${box}/>`;
-      if (regions.length) { pts.push([x + w / 2, y + hh / 2]); continue; }
+      if (i in groups || (regions.length && own.includes(i))) { pts.push([x + w / 2, y + hh / 2]); continue; } // 지시선이 없는 이름 / 면적으로 표시한 부재: 선·점 없음
       for (const [px, py] of ps) {
         const ax = px < x ? x - 4 : px > x + w ? x + w + 4 : px;
         const ay = py < y ? y - 4 : py > y + hh ? y + hh + 4 : py;
