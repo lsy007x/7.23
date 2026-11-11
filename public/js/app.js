@@ -67,12 +67,23 @@ function toast(msg) {
   el.textContent = msg; el.classList.add("show");
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 3800);
 }
+// 복사는 환경(보안 컨텍스트·iframe 권한)에 따라 막힐 수 있어, 성공했을 때만 "복사됨"이라고 알린다
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* 아래 방식으로 재시도 */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;opacity:0;left:-1000px";
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch { return false; }
+}
 document.addEventListener("click", (e) => {
   const a = e.target.closest("[data-photo]");
-  if (!a) return;
+  if (!a) return; // 링크는 그대로 새 탭에서 열린다
   const word = a.dataset.photo;
-  try { navigator.clipboard?.writeText(word); } catch { /* 복사 실패해도 사이트는 열린다 */ }
-  toast(`‘${word}’ 복사됨 — 국가유산 디지털 검색창에 붙여넣으세요`);
+  copyText(word).then((ok) => toast(ok ? `‘${word}’ 복사됨 — 사이트 검색창에 붙여넣으세요` : `사이트 검색창에 ‘${word}’ 를 직접 입력해 주세요`));
 });
 function detailHTML(t, { showMapLink = true } = {}) {
   const rel = t.related.map((r) => TERM_BY_ID[r]).filter(Boolean);
@@ -87,7 +98,7 @@ function detailHTML(t, { showMapLink = true } = {}) {
       <a class="btn" href="${photoUrl(t)}" target="_blank" rel="noopener">실제 사진 보기 ↗</a>
       <a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${t.name}에 대해 설명해줘`)}">AI 튜터에게 묻기</a>
     </div>
-    <a class="khs-link" href="${PHOTO_SITE}" target="_blank" rel="noopener" data-photo="${esc(searchWord(t))}"><span><b>국가유산 디지털 서비스</b><small>공식 사진·도면·3D 자료 (용어가 복사돼요)</small></span><i class="go">${ARROW}</i></a>
+    <a class="khs-link" href="${PHOTO_SITE}" target="_blank" rel="noopener" data-photo="${esc(searchWord(t))}"><span><b>국가유산 디지털 서비스</b><small>공식 사진·도면·3D 자료 · 검색어 ‘${esc(searchWord(t))}’</small></span><i class="go">${ARROW}</i></a>
     <p class="meta">${esc(catName(t.cat))} › ${esc(subName(t.cat, t.sub))} · 출처: ${esc(t.source)}</p>`;
 }
 
