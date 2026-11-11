@@ -2,6 +2,8 @@
 import { FIGURES } from "./figures.js";
 import { TERM_BY_NAME } from "./data.js";
 import { REGIONS } from "./regions.js";
+import { REGIONS_MANUAL } from "./regions_manual.js";
+import { BRACKETS } from "./brackets.js";
 
 const idOf = (name) => TERM_BY_NAME[name]?.id;
 
@@ -67,19 +69,24 @@ export function mountFigure(root, key, onPick) {
     const spots = [...own, ...members];
     svg.classList.toggle("focus", spots.length > 0);
     // 면적을 찾은 부재(regions.js)는 그 칸 전체를 빛나게 하고, 못 찾은 부재는 지시선 끝에 점으로 표시한다
-    const regions = (id && REGIONS[key]?.[id]) || [];
+    const regions = (id && (REGIONS_MANUAL[key]?.[id] || REGIONS[key]?.[id])) || [];
     let h = "", m = "";
     const pts = [];
     for (const d of regions) {
       h += `<path d="${d}" fill="#000" fill-rule="evenodd"/>`;
       m += `<path class="garea" d="${d}" fill-rule="evenodd"/>`;
     }
+    const bracket = own.map((i) => BRACKETS[key]?.[i]).filter(Boolean);
+    for (const d of bracket) {
+      h += `<path d="${d}" fill="#000" fill-rule="evenodd" stroke="#000" stroke-width="10"/>`;
+      m += `<path class="gbracket" d="${d}" fill-rule="evenodd"/>`;
+    }
     for (const i of spots) {
       const [, [x, y, w, hh], ps] = f.spots[i];
       const box = `x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${hh + 8}" rx="4"`;
       h += `<rect ${box} fill="#000"/>`;
       m += `<rect class="gbox" ${box}/>`;
-      if (i in groups || (regions.length && own.includes(i))) { pts.push([x + w / 2, y + hh / 2]); continue; } // 지시선이 없는 이름 / 면적으로 표시한 부재: 선·점 없음
+      if (i in groups || (regions.length && own.includes(i)) || (own.length && !own.includes(i) && (own.some((o) => o in groups)))) { pts.push([x + w / 2, y + hh / 2]); continue; } // 지시선이 없는 괄호식 이름·그 소속 부재 이름·면적으로 표시한 부재: 선·점 없음
       for (const [px, py] of ps) {
         const ax = px < x ? x - 4 : px > x + w ? x + w + 4 : px;
         const ay = py < y ? y - 4 : py > y + hh ? y + hh + 4 : py;

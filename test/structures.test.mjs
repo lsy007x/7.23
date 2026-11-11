@@ -78,3 +78,20 @@ test("도면 groups(괄호식 이름): 번호가 올바르고 소속 부재가 �
   }
   assert.ok(n >= 25);
 });
+
+test("수동 영역·괄호: 도면에 실제로 있는 용어 id이고 path 형식이 올바르다", async () => {
+  const { REGIONS_MANUAL } = await import("../public/js/regions_manual.js");
+  const { BRACKETS } = await import("../public/js/brackets.js");
+  const { FIGURES } = await import("../public/js/figures.js");
+  const { TERM_BY_NAME } = await import("../public/js/data.js");
+  for (const [key, byId] of Object.entries(REGIONS_MANUAL)) {
+    const ids = new Set(FIGURES[key].spots.map(([n]) => TERM_BY_NAME[n]?.id));
+    for (const [id, paths] of Object.entries(byId)) {
+      assert.ok(ids.has(id), `수동 영역 ${key}/${id}: 도면에 없는 용어`);
+      assert.ok(paths.every((d) => /^M[\d. LZM-]+Z$/.test(d)), `${key}/${id} path 형식`);
+    }
+  }
+  for (const [key, byIdx] of Object.entries(BRACKETS)) {
+    for (const gi of Object.keys(byIdx)) assert.ok(key in FIGURES && FIGURES[key].groups?.[gi], `괄호 ${key}[${gi}]는 groups에 있어야 함`);
+  }
+});
