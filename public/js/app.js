@@ -126,19 +126,13 @@ function pageHome() {
       ${CATEGORIES.map((c) => `<a class="cat-card c-${c.id}" href="#/c/${c.id}"><b>${c.name}</b><i lang="ko-Hani">${HANJA[c.id]}</i></a>`).join("")}
     </div>
     <h2 class="label">도구</h2>
-    <a class="hero-card" href="#/ai/tag">
-      <span class="tag-ai">AI 판독</span>
-      <h2>사진 한 장으로 부재 이름 찾기</h2>
-      <p>답사 사진이나 도면을 올리면 용어집에서 이름을 찾아 드려요.</p>
-      <span class="pill">사진 올리기${CHEVRON}</span>
-    </a>
-    <div class="mini-row">
-      <a class="mini" href="#/ai/tutor"><b>AI 용어 튜터</b><small>용어집을 근거로 답하고 출처를 밝혀요</small></a>
-      <a class="mini" href="${PHOTO_SITE}" target="_blank" rel="noopener"><b>국가유산 디지털 서비스</b><small>실제 사진·도면·3D 자료</small><i class="go">${ARROW}</i></a>
+    <div class="sub-list tools">
+      <a href="#/ai/tag"><b>사진으로 부재 이름 찾기</b><small>답사 사진이나 도면을 올리면 용어집에서 이름을 찾아 드려요</small>${CHEVRON}</a>
+      <a href="#/ai/tutor"><b>AI 용어 튜터</b><small>용어집을 근거로 답하고 출처를 밝혀요</small>${CHEVRON}</a>
+      <a href="${PHOTO_SITE}" target="_blank" rel="noopener"><b>국가유산 디지털 서비스</b><small>실제 사진·도면·3D 자료 (새 창)</small>${CHEVRON}</a>
     </div>
     <footer class="colophon">
-      <dl><div><dt>용어</dt><dd>${TERMS.length}</dd></div><div><dt>도면</dt><dd>${figCount}</dd></div><div><dt>3D 구조</dt><dd>${STRUCTURES.length}</dd></div></dl>
-      <p>정의의 출처는 용어마다 아래쪽에 적혀 있어요. 현장에서는 도면과 함께 확인해 주세요.</p>
+      <p>용어 ${TERMS.length}개, 도면 ${figCount}장, 3D 구조 ${STRUCTURES.length}종을 담았어요. 정의의 출처는 용어마다 아래쪽에 적혀 있어요. 현장에서는 도면과 함께 확인해 주세요.</p>
     </footer>
   </section>`;
   bindSearch(view);
@@ -557,7 +551,6 @@ function route() {
   document.title = title ? `${title} · TAMSAEK-H` : "TAMSAEK-H · 문화유산 용어 사전";
   const tabs = [...tabbar.querySelectorAll("a")];
   tabs.forEach((a) => { const on = a.dataset.nav === nav; a.classList.toggle("on", on); on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"); });
-  tabbar.style.setProperty("--i", tabs.findIndex((a) => a.dataset.nav === nav));
   window.scrollTo(0, 0);
 }
 addEventListener("hashchange", route);
