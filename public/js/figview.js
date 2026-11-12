@@ -22,7 +22,7 @@ export function renderFigure(key) {
   return `<div class="pfig" data-key="${key}">
     <div class="pfig-scroll"><div class="pfig-inner">
       <img src="${f.src}" width="${f.w}" height="${f.h}" alt="${f.title}" draggable="false" />
-      <svg class="pfig-ov" viewBox="0 0 ${f.w} ${f.h}" aria-hidden="true">
+      <svg class="pfig-ov" data-kind="diagram" viewBox="0 0 ${f.w} ${f.h}" aria-hidden="true">
         <defs><mask id="mask-${key}" maskUnits="userSpaceOnUse"><rect width="${f.w}" height="${f.h}" fill="#fff"/><g class="holes"></g></mask></defs>
         <rect class="dim" width="${f.w}" height="${f.h}" mask="url(#mask-${key})"/>
         <g class="marks"></g><g class="hits">${hits}</g>

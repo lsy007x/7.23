@@ -92,7 +92,7 @@ function detailHTML(t, { showMapLink = true } = {}) {
   const rel = t.related.map((r) => TERM_BY_ID[r]).filter(Boolean);
   const map = showMapLink ? diagramRoute(t) : null;
   return `<p class="eyebrow c-${t.cat}"><a href="#/c/${t.cat}">${esc(catName(t.cat))}</a><span>${esc(subName(t.cat, t.sub))}</span></p>
-    <h2>${esc(t.name)}${hanjaSpan(t)}</h2>
+    <div class="headword"><h2>${esc(t.name)}</h2>${hanjaSpan(t)}</div>
     <p class="short">${esc(t.short)}</p>
     <p class="desc">${esc(t.desc)}</p>
     ${t.aliases.length ? `<p class="alias"><b>다른 이름</b>${t.aliases.map(esc).join(", ")}</p>` : ""}
@@ -115,8 +115,8 @@ function pageHome() {
   const figCount = Object.keys(FIGURES).length;
   view.innerHTML = `<section class="home">
     <header class="hero">
-      <p class="kicker">문화유산 용어 사전</p>
       <h1 class="brand">TAMSAEK – H</h1>
+      <p class="kicker">문화유산 용어 사전</p>
       <p class="tagline">문화유산의 단어를 쉽게 이해하다.</p>
     </header>
     ${searchBox("q-home")}
