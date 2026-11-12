@@ -463,7 +463,7 @@ async function runTag(file) {
       }).join("") : `<p class="notice">용어집에 있는 부재를 찾지 못했습니다.</p>`}
       ${data.unlisted?.length ? `<p class="where">용어집에 없는 부재: ${data.unlisted.map(esc).join(", ")}</p>` : ""}`;
   } catch (e) {
-    card.innerHTML = `<p class="notice err">${esc(e.message)}</p><p class="where">AI 기능은 서버(<code>npm start</code>)와 API 키가 있어야 동작합니다. 그동안 <a href="#/s/">용어 검색</a>이나 도면에서 직접 확인할 수 있습니다.</p>`;
+    card.innerHTML = `<p class="notice">지금은 AI 판독을 쓸 수 없어요. <a href="#/s/">용어 검색</a>이나 도면에서 직접 확인해 주세요.</p>`;
   }
 }
 
@@ -519,7 +519,7 @@ async function ask(q) {
     // AI 서버가 없을 때: 검색된 용어집 원문을 그대로 보여 줌 (환각 없는 대체 답변)
     const docs = retrieve(q, 5);
     m = { role: "bot", sources: docs.map((d) => ({ id: d.id, name: d.name, source: d.source })),
-      html: `<span class="notice err" style="display:block">AI 답변을 받지 못했습니다 (${esc(e.message)}). 대신 용어집에서 찾은 원문입니다.</span>` +
+      html: `<span class="notice" style="display:block">지금은 AI 답변을 쓸 수 없어서, 용어집에서 찾은 원문을 보여 드려요.</span>` +
         (docs.length ? docs.map((d) => `<b>${esc(d.name)}</b> — ${esc(d.desc)}`).join("\n\n") : "관련 용어를 찾지 못했습니다.") };
   }
   chatLog.push(m);

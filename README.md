@@ -28,6 +28,14 @@ ANTHROPIC_API_KEY=sk-ant-... npm start      # http://localhost:8080
 - 모델 기본값은 `claude-opus-5-5` (`TAMSAEK_MODEL`로 변경 가능). 거절 시 서버측 대체 모델(`fallbacks: "default"`)이 켜져 있습니다.
 - `public/` 폴더만 정적 호스팅해도 AI를 제외한 기능은 동작합니다.
 
+## 공개 (GitHub Pages)
+
+`.github/workflows/pages.yml`이 `public/` 폴더를 GitHub Pages에 올립니다. AI 기능(사진 태깅·튜터 답변)은 서버가 없어 안내 문구와 용어집 원문으로 대체됩니다.
+
+1. 저장소 Settings → Pages → Source를 **GitHub Actions**로 설정
+2. Settings → Environments → `github-pages` → Deployment branches에 배포할 브랜치 허용(또는 그 브랜치를 기본 브랜치로 지정)
+3. Actions 탭에서 "Deploy to GitHub Pages"를 실행하면 `https://<사용자>.github.io/<저장소>/` 주소가 생깁니다
+
 ## 구조
 
 ```
