@@ -630,6 +630,7 @@ TERMS.push(
     t.desc = d.desc;
     if (d.hanja) t.hanja = d.hanja;
     t.source = d.source;
+    if (d.heritage) { t.heritage = d.heritage; t.heritageSource = d.heritageSource; }
   }
 }
 

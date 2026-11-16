@@ -88,6 +88,13 @@ function diagramRoute(t) {
 const photoUrl = (t) => `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${t.name.replace(/\(.+\)$/, "")} ${t.hanja || ""} ${catName(t.cat)}`.trim())}`;
 // 국가유산 디지털 서비스 (첫 화면으로 연결)
 const PHOTO_SITE = "https://digital.khs.go.kr/";
+// 대표 문화유산: 이름으로 바로 찾아볼 수 있게 검색으로 연결
+const heritageUrl = (name) => `https://www.google.com/search?q=${encodeURIComponent(`${name} 국가유산`)}`;
+function heritageHTML(t) {
+  if (!t.heritage?.length) return "";
+  return `<div class="section-title">대표 문화유산</div><div class="heritage">${t.heritage.map((h) =>
+    `<a href="${heritageUrl(h.name)}" target="_blank" rel="noopener"><span><b>${esc(h.name)}</b>${h.grade ? `<small>${esc(h.grade)}</small>` : ""}</span><i class="go">${ARROW}</i></a>`).join("")}</div>`;
+}
 function detailHTML(t, { showMapLink = true } = {}) {
   const rel = t.related.map((r) => TERM_BY_ID[r]).filter(Boolean);
   const map = showMapLink ? diagramRoute(t) : null;
@@ -97,13 +104,15 @@ function detailHTML(t, { showMapLink = true } = {}) {
     <p class="desc">${esc(t.desc)}</p>
     ${t.aliases.length ? `<p class="alias"><b>다른 이름</b>${t.aliases.map(esc).join(", ")}</p>` : ""}
     ${rel.length ? `<div class="section-title">관련 용어</div><div class="chips">${rel.map((r) => `<a class="chip" href="#/t/${r.id}" data-pick="${r.id}">${esc(r.name)}</a>`).join("")}</div>` : ""}
+    ${heritageHTML(t)}
     <div class="actions">
       ${map ? `<a class="btn primary wide" href="${map}">도면·3D에서 위치 보기</a>` : ""}
       <a class="btn" href="${photoUrl(t)}" target="_blank" rel="noopener">실제 사진 보기</a>
       <a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${t.name}에 대해 설명해줘`)}">AI 튜터에게 묻기</a>
     </div>
     <a class="khs-link" href="${PHOTO_SITE}" target="_blank" rel="noopener"><span><b>국가유산 디지털 서비스</b><small>공식 사진·도면·3D 자료</small></span><i class="go">${ARROW}</i></a>
-    <p class="meta"><b>출처</b>${esc(t.source)}</p>`;
+    <p class="meta"><b>출처</b>${esc(t.source)}</p>
+    ${t.heritageSource ? `<p class="meta sub"><b>문화유산 근거</b>${esc(t.heritageSource)}</p>` : ""}`;
 }
 
 // ─────────────────── 페이지 ───────────────────

@@ -49,6 +49,8 @@ test("검수본 정의: 모든 키가 용어집에 있고 설명이 반영된다
     assert.ok(t.source.startsWith("사용자 검수본"), `${name} 출처`);
     if (d.hanja) assert.equal(t.hanja, d.hanja);
     assert.ok(!/[:：]\s*$/.test(d.desc) && d.desc.length > 5, `${name} 설명 형식`);
+    assert.ok(d.heritage?.length && d.heritage.every((h) => h.name && !/\((국보|보물|사적)\)$/.test(h.name)), `${name} 대표 문화유산`);
+    assert.deepEqual(t.heritage, d.heritage);
   }
 });
 
