@@ -97,3 +97,11 @@ test("수동 영역·괄호: 도면에 실제로 있는 용어 id이고 path 형
     for (const gi of Object.keys(byIdx)) assert.ok(key in FIGURES && FIGURES[key].groups?.[gi], `괄호 ${key}[${gi}]는 groups에 있어야 함`);
   }
 });
+
+test("오프라인 저장 목록(sw.js)에 public의 모든 화면 파일이 들어 있다", async () => {
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const sw = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
+  for (const dir of ["js", "css", "img"]) {
+    for (const f of readdirSync(new URL(`../public/${dir}/`, import.meta.url))) assert.ok(sw.includes(`"${dir}/${f}"`), `sw.js에 없음: ${dir}/${f}`);
+  }
+});

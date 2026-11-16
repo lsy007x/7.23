@@ -62,7 +62,7 @@ export async function mountModel(el, { onPick, names, onRoof, type = DEFAULT_STR
     c.width = Math.ceil(ctx.measureText(text).width) + 40; c.height = f + 28;
     ctx.font = `700 ${f}px "Noto Sans KR", sans-serif`;
     ctx.fillStyle = "rgba(31,26,20,.85)"; ctx.beginPath(); ctx.roundRect(0, 0, c.width, c.height, 16); ctx.fill();
-    ctx.fillStyle = "#d4a017"; ctx.textBaseline = "middle"; ctx.fillText(text, 20, c.height / 2 + 2);
+    ctx.fillStyle = `#${gold.getHexString()}`; ctx.textBaseline = "middle"; ctx.fillText(text, 20, c.height / 2 + 2);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
     sp.scale.set(c.width / c.height * 0.7, 0.7, 1);
     sp.renderOrder = 10;
@@ -243,17 +243,22 @@ export async function mountModel(el, { onPick, names, onRoof, type = DEFAULT_STR
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
   }
-  const ro = new ResizeObserver(resize);
+  // 움직일 때만 다시 그린다 (가만히 있을 때 배터리를 쓰지 않도록)
+  let alive = true, raf = 0;
+  const draw = () => { raf = 0; if (!alive) return; controls.update(); renderer.render(scene, camera); };
+  const invalidate = () => { if (alive && !raf) raf = requestAnimationFrame(draw); };
+  controls.addEventListener("change", invalidate); // 감속(damping) 중에는 update()가 change를 계속 내므로 멈출 때까지 이어진다
+  const then = (fn) => (...a) => { const r = fn(...a); invalidate(); return r; };
+  const ro = new ResizeObserver(() => { resize(); invalidate(); });
   ro.observe(el);
   resize();
 
   buildModel(type);
   frame();
-  let alive = true;
-  (function loop() { if (!alive) return; controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); })();
+  invalidate();
 
   return {
-    select, toggleRoof, viewFront, setType,
+    select: then(select), toggleRoof: then(toggleRoof), viewFront: then(viewFront), setType: then(setType),
     ids: () => [...byId.keys()],
     type: () => curType,
     dispose() { alive = false; ro.disconnect(); clearModel(); renderer.dispose(); renderer.domElement.remove(); },

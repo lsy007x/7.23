@@ -36,6 +36,10 @@ ANTHROPIC_API_KEY=sk-ant-... npm start      # http://localhost:8080
 2. Settings → Environments → `github-pages` → Deployment branches에 배포할 브랜치 허용(또는 그 브랜치를 기본 브랜치로 지정)
 3. Actions 탭에서 "Deploy to GitHub Pages"를 실행하면 `https://<사용자>.github.io/<저장소>/` 주소가 생깁니다
 
+## 오프라인
+
+`public/sw.js`가 화면·코드·도면 이미지를 휴대폰에 저장해, 한 번 열어 본 뒤에는 신호가 없어도 검색·도면이 열립니다(AI 기능 제외, 3D는 온라인에서 한 번 열어 본 뒤부터). `public/`에 파일을 추가하면 `sw.js`의 `CORE` 목록에도 넣어야 하며, 빠뜨리면 `npm test`가 알려 줍니다.
+
 ## 구조
 
 ```

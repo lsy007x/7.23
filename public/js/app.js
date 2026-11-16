@@ -99,11 +99,11 @@ function heritageHTML(t) {
   return `<div class="section-title">대표 문화유산</div><div class="heritage">${t.heritage.map((h) =>
     `<a href="${heritageUrl(h.name, t)}" target="_blank" rel="noopener"><span><b>${esc(h.name)}</b>${h.grade ? `<small>${esc(h.grade)}</small>` : ""}</span><i class="go">${ARROW}</i></a>`).join("")}</div>`;
 }
-function detailHTML(t, { showMapLink = true } = {}) {
+function detailHTML(t, { showMapLink = true, h = "h2" } = {}) {
   const rel = t.related.map((r) => TERM_BY_ID[r]).filter(Boolean);
   const map = showMapLink ? diagramRoute(t) : null;
   return `<p class="eyebrow c-${t.cat}"><a href="#/c/${t.cat}">${esc(catName(t.cat))}</a><span>${esc(subName(t.cat, t.sub))}</span></p>
-    <div class="headword"><h2>${esc(t.name)}</h2>${hanjaSpan(t)}</div>
+    <div class="headword"><${h}>${esc(t.name)}</${h}>${hanjaSpan(t)}</div>
     <p class="short">${esc(t.short)}</p>
     <p class="desc">${esc(t.desc)}</p>
     ${t.aliases.length ? `<p class="alias"><b>다른 이름</b>${t.aliases.map(esc).join(", ")}</p>` : ""}
@@ -204,6 +204,7 @@ async function pageDiagram(catId, subId, sel) {
     : "건물을 탭하면 금색으로 강조돼요. 다시 탭하면 풀려요.";
 
   view.innerHTML = `${header(c.id, c.name)}
+    <h1 class="sr-only">${esc(c.name)} · ${esc(s.name)}</h1>
     <nav class="sub-tabs" aria-label="소주제">${c.subs.map((x) => `<a href="#/c/${c.id}/${x.id}" class="${x.id === subId ? "on" : ""}"${x.id === subId ? ' aria-current="page"' : ""}>${x.name}</a>`).join("")}</nav>
     ${hasFigure ? `<div class="figure${figs.length ? " figure-photo" : ""}" id="fig">${figureHTML}</div>
       ${is3D ? structCard() : ""}
@@ -326,7 +327,7 @@ async function pageDiagram(catId, subId, sel) {
     const sheet = document.createElement("div");
     sheet.className = "sheet"; sheet.hidden = true;
     sheet.innerHTML = `<div class="sheet-bg" data-close></div>
-      <section class="sheet-panel" role="dialog" aria-modal="true" aria-label="용어 목록">
+      <section class="sheet-panel" role="dialog" aria-modal="true" aria-label="용어 목록" tabindex="-1">
         <div class="sheet-grab" aria-hidden="true"></div>
         <div class="sheet-head"><h2>용어 목록 <small id="sheetCount">${listTerms.length}</small></h2><button type="button" data-close>닫기</button></div>
         <div class="sheet-search"><input id="sheetq" type="search" autocomplete="off" placeholder="이 도면에서 찾기" aria-label="이 도면에서 용어 찾기" /></div>
@@ -348,11 +349,22 @@ async function pageDiagram(catId, subId, sel) {
       listEl.scrollTop = 0;
     };
     refreshList = () => { listTerms = buildListTerms(); countEl.textContent = listTerms.length; sheet.querySelector("#sheetCount").textContent = listTerms.length; };
-    const openSheet = () => { fillList(); sheet.querySelector("#sheetq").value = ""; sheet.hidden = false; document.body.classList.add("no-scroll"); };
-    const closeSheet = () => { sheet.hidden = true; document.body.classList.remove("no-scroll"); };
-    view.querySelector("#openList").onclick = openSheet;
-    // 손잡이·제목 줄을 아래로 끌면 닫힌다
     const panel = sheet.querySelector(".sheet-panel");
+    const opener = view.querySelector("#openList");
+    // 열면 포커스를 창으로 옮기고(검색칸에 두면 휴대폰 자판이 올라오므로 창 자체에), 닫으면 연 버튼으로 돌려준다
+    const openSheet = () => { fillList(); sheet.querySelector("#sheetq").value = ""; sheet.hidden = false; document.body.classList.add("no-scroll"); panel.focus(); };
+    const closeSheet = ({ refocus = true } = {}) => { sheet.hidden = true; document.body.classList.remove("no-scroll"); panel.style.transition = ""; panel.style.transform = ""; if (refocus) opener.focus(); };
+    opener.onclick = openSheet;
+    sheet.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); return closeSheet(); }
+      if (e.key !== "Tab") return;
+      // Tab이 창 밖(가려진 화면)으로 나가지 않게 한다
+      const f = [...sheet.querySelectorAll("button, input")].filter((x) => x.offsetParent);
+      const first = f[0], last = f.at(-1);
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === panel)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+    // 손잡이·제목 줄을 아래로 끌면 닫힌다
     let dragY = null;
     for (const el of [sheet.querySelector(".sheet-grab"), sheet.querySelector(".sheet-head")]) {
       el.addEventListener("touchstart", (e) => { dragY = e.touches[0].clientY; panel.style.transition = "none"; }, { passive: true });
@@ -362,6 +374,7 @@ async function pageDiagram(catId, subId, sel) {
         panel.style.transition = ""; panel.style.transform = "";
         if (dy > 90) closeSheet();
       });
+      el.addEventListener("touchcancel", () => { dragY = null; panel.style.transition = ""; panel.style.transform = ""; });
     }
     view.querySelector("#clearSel").onclick = () => choose(null);
     sheet.querySelector("#sheetq").addEventListener("input", (e) => fillList(e.target.value));
@@ -370,7 +383,7 @@ async function pageDiagram(catId, subId, sel) {
       const j = e.target.closest("[data-jump]");
       if (j) { const h = listEl.querySelector(`[data-g="${j.dataset.jump}"]`); if (h) listEl.scrollTop = h.offsetTop; return; }
       const b = e.target.closest("[data-pick]");
-      if (b) { closeSheet(); choose(b.dataset.pick, true); }
+      if (b) { closeSheet({ refocus: false }); choose(b.dataset.pick, true); }
     });
   }
 
@@ -408,7 +421,7 @@ function pageTerm(id) {
       <span class="pos">${i + 1} / ${sibs.length}</span>
       ${next ? `<a class="next" href="#/t/${next.id}"><small>다음</small><b>${esc(next.name)}</b></a>` : "<span></span>"}
     </nav>` : "";
-  view.innerHTML = `${header(t.cat, catName(t.cat))}<article class="detail">${detailHTML(t)}</article>${pager}`;
+  view.innerHTML = `${header(t.cat, catName(t.cat))}<article class="detail">${detailHTML(t, { h: "h1" })}</article>${pager}`;
   bindSearch(view);
   return t.name;
 }
@@ -541,7 +554,7 @@ async function ask(q) {
 }
 
 function pageNotFound() {
-  view.innerHTML = `${header(null, null)}<p class="placeholder">페이지를 찾을 수 없습니다. <a href="#/">홈으로</a></p>`;
+  view.innerHTML = `${header(null, null)}<h1 class="page">페이지를 찾을 수 없어요</h1><p class="lead">주소가 바뀌었거나 없는 용어예요. <a href="#/">홈으로 가기</a></p>`;
   bindSearch(view);
 }
 
@@ -567,6 +580,8 @@ function route() {
   window.scrollTo(0, 0);
 }
 addEventListener("hashchange", route);
+// 오프라인 지원 (sw.js). 미리보기처럼 등록이 막힌 환경에서는 조용히 건너뛴다
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 // 화면을 내리면 붙어 있는 탭 아래에 옅은 그림자를 준다
 addEventListener("scroll", () => document.body.classList.toggle("scrolled", scrollY > 60), { passive: true });
 route();
