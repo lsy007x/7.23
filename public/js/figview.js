@@ -35,7 +35,7 @@ export function renderFigure(key) {
   </div>`;
 }
 
-// 확대 단계: 가로로 넓은 목조 도면은 처음부터 크게 보여 줌
+// 확대 단계: 처음에는 도면 전체가 보이고, ＋/−로 확대한다
 export function mountFigure(root, key, onPick) {
   const f = FIGURES[key];
   const scroller = root.querySelector(".pfig-scroll");
@@ -45,7 +45,7 @@ export function mountFigure(root, key, onPick) {
   const ready = () => img.classList.add("ready");
   img.complete ? ready() : img.addEventListener("load", ready, { once: true });
   const steps = [1, 1.6, 2.4, 3.4];
-  let z = f.w >= 1000 && f.w > f.h * 1.2 ? 2 : 0; // 가로로 긴 도면만 처음부터 확대
+  let z = 0;
   const apply = () => { inner.style.width = `${steps[z] * 100}%`; };
   apply();
   root.querySelector(".zoom").addEventListener("click", (e) => {
