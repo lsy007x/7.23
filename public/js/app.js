@@ -88,12 +88,16 @@ function diagramRoute(t) {
 const photoUrl = (t) => `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${t.name.replace(/\(.+\)$/, "")} ${t.hanja || ""} ${catName(t.cat)}`.trim())}`;
 // 국가유산 디지털 서비스 (첫 화면으로 연결)
 const PHOTO_SITE = "https://digital.khs.go.kr/";
-// 대표 문화유산: 이름으로 바로 찾아볼 수 있게 검색으로 연결
-const heritageUrl = (name) => `https://www.google.com/search?q=${encodeURIComponent(`${name} 국가유산`)}`;
+// 대표 문화유산: "문화유산 이름 + 용어"로 검색 (예: 창덕궁 인정전 풍잠)
+// 문화유산 이름에 용어가 이미 들어 있으면(예: 예천 용문사 대장전) 되풀이하지 않는다
+const heritageUrl = (name, t) => {
+  const term = t.name.replace(/\(.+\)$/, "");
+  return `https://www.google.com/search?q=${encodeURIComponent(name.includes(term) ? name : `${name} ${term}`)}`;
+};
 function heritageHTML(t) {
   if (!t.heritage?.length) return "";
   return `<div class="section-title">대표 문화유산</div><div class="heritage">${t.heritage.map((h) =>
-    `<a href="${heritageUrl(h.name)}" target="_blank" rel="noopener"><span><b>${esc(h.name)}</b>${h.grade ? `<small>${esc(h.grade)}</small>` : ""}</span><i class="go">${ARROW}</i></a>`).join("")}</div>`;
+    `<a href="${heritageUrl(h.name, t)}" target="_blank" rel="noopener"><span><b>${esc(h.name)}</b>${h.grade ? `<small>${esc(h.grade)}</small>` : ""}</span><i class="go">${ARROW}</i></a>`).join("")}</div>`;
 }
 function detailHTML(t, { showMapLink = true } = {}) {
   const rel = t.related.map((r) => TERM_BY_ID[r]).filter(Boolean);
