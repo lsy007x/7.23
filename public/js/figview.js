@@ -57,12 +57,32 @@ export function mountFigure(root, key, onPick) {
     apply();
     scroller.scrollTo(cx * inner.clientWidth - scroller.clientWidth / 2, cy * inner.clientHeight - scroller.clientHeight / 2);
   });
+  // 탭한 곳에서 가장 가까운 부재를 찾는다. 이름표가 작고 촘촘해도(전체 보기) 고르고 풀 수 있도록
+  // 1) 선택된 부재 근처를 다시 누르면 해제. 단, 화면에서 충분히 크게 보이는 다른 이름표를 정확히 눌렀으면 그 부재로 바꾼다
+  // 2) 이름표를 정확히 누르면 그 부재, 3) 근처에 있는 가장 가까운 부재, 4) 빈 곳이면 해제
+  let selId = null;
   svg.addEventListener("click", (e) => {
-    const el = e.target.closest("[data-id]");
-    onPick(el ? el.dataset.id : null);
+    const r = svg.getBoundingClientRect();
+    const k = r.width / f.w; // 화면 배율
+    const x = (e.clientX - r.left) / k, y = (e.clientY - r.top) / k;
+    const reach = 18 / k; // 손가락 오차 18px(화면 기준)
+    let best = null, bestD = Infinity, onLabel = false, bestH = 0, selD = Infinity;
+    for (const [name, [bx, by, bw, bh], pts] of f.spots) {
+      const id = idOf(name);
+      if (!id) continue;
+      const dBox = Math.hypot(Math.max(bx - x, 0, x - bx - bw), Math.max(by - y, 0, y - by - bh)); // 이름표까지
+      const d = Math.min(dBox, ...pts.map(([px, py]) => Math.max(0, Math.hypot(px - x, py - y) - 9))); // 지시선 끝점 포함
+      if (id === selId) selD = Math.min(selD, d);
+      // 같은 거리면 이름표를 직접 누른 쪽이 우선 (옆 부재의 지시선 끝점과 겹칠 때)
+      if (d < bestD || (d === bestD && dBox === 0 && !onLabel)) { bestD = d; best = id; onLabel = dBox === 0; bestH = bh * k; }
+    }
+    const deliberate = onLabel && best !== selId && bestH >= 7; // 크게 보이는 다른 이름표를 정확히 누름
+    if (selD <= reach && !deliberate) return onPick(selId);
+    onPick(bestD <= reach ? best : null);
   });
 
   function select(id) {
+    selId = id || null;
     const holes = svg.querySelector(".holes");
     const marks = svg.querySelector(".marks");
     const groups = f.groups || {};

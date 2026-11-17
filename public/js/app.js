@@ -20,8 +20,18 @@ const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(`tamsaek.${k}`)) || []; } catch { return []; } },
   push(k, v, max) { try { localStorage.setItem(`tamsaek.${k}`, JSON.stringify([v, ...this.get(k).filter((x) => x !== v)].slice(0, max))); } catch { /* 무시 */ } },
   clear(k) { try { localStorage.removeItem(`tamsaek.${k}`); } catch { /* 무시 */ } },
+  // 있으면 빼고 없으면 맨 앞에 넣는다. 넣었으면 true
+  toggle(k, v) {
+    const on = !this.get(k).includes(v);
+    try { localStorage.setItem(`tamsaek.${k}`, JSON.stringify(on ? [v, ...this.get(k)] : this.get(k).filter((x) => x !== v))); } catch { return false; }
+    return on;
+  },
 };
 const recentTerms = () => store.get("terms").map((id) => TERM_BY_ID[id]).filter(Boolean);
+// 즐겨찾기 (이 기기에만 저장)
+const favTerms = () => store.get("favs").map((id) => TERM_BY_ID[id]).filter(Boolean);
+const ICON_STAR = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>`;
+const favButton = (t) => { const on = store.get("favs").includes(t.id); return `<button type="button" class="fav" data-fav="${t.id}" aria-pressed="${on}" aria-label="즐겨찾기">${ICON_STAR}</button>`; };
 // 검색어와 일치하는 부분을 표시한다
 function hl(text, q) {
   const t = String(text ?? ""), n = (q || "").trim();
@@ -103,7 +113,7 @@ function detailHTML(t, { showMapLink = true, h = "h2" } = {}) {
   const rel = t.related.map((r) => TERM_BY_ID[r]).filter(Boolean);
   const map = showMapLink ? diagramRoute(t) : null;
   return `<p class="eyebrow c-${t.cat}"><a href="#/c/${t.cat}">${esc(catName(t.cat))}</a><span>${esc(subName(t.cat, t.sub))}</span></p>
-    <div class="headword"><${h}>${esc(t.name)}</${h}>${hanjaSpan(t)}</div>
+    <div class="headrow"><div class="headword"><${h}>${esc(t.name)}</${h}>${hanjaSpan(t)}</div>${favButton(t)}</div>
     <p class="short">${esc(t.short)}</p>
     <p class="desc">${esc(t.desc)}</p>
     ${t.aliases.length ? `<p class="alias"><b>다른 이름</b>${t.aliases.map(esc).join(", ")}</p>` : ""}
@@ -120,6 +130,18 @@ function detailHTML(t, { showMapLink = true, h = "h2" } = {}) {
 }
 
 // ─────────────────── 페이지 ───────────────────
+function favRow() {
+  const f = favTerms();
+  return f.length ? `<section class="recent"><h2 class="label">즐겨찾기 <span>${f.length}</span><a class="link" href="#/fav">모두 보기</a></h2><div class="hscroll">${f.slice(0, 12).map((t) => `<a class="chip" href="#/t/${t.id}">${esc(t.name)}</a>`).join("")}</div></section>` : "";
+}
+function pageFav() {
+  const f = favTerms();
+  view.innerHTML = `${header(null, null)}
+    <h1 class="page">즐겨찾기 <span class="count">${f.length}</span></h1>
+    ${f.length ? `<p class="lead">이 기기에만 저장돼요. 용어 화면의 별을 다시 누르면 빠져요.</p>${termList(f)}`
+      : `<div class="empty-state"><b>아직 즐겨찾기한 용어가 없어요</b><p>용어 이름 옆의 별을 누르면 여기에 모여요. 답사 전에 볼 용어를 담아 두세요.</p><a class="btn primary" href="#/s/">용어 찾아보기</a></div>`}`;
+  bindSearch(view);
+}
 function recentRow() {
   const r = recentTerms().slice(0, 8);
   return r.length ? `<section class="recent"><h2 class="label">최근 본 용어</h2><div class="hscroll">${r.map((t) => `<a class="chip" href="#/t/${t.id}">${esc(t.name)}</a>`).join("")}</div></section>` : "";
@@ -133,6 +155,7 @@ function pageHome() {
       <p class="tagline">문화유산의 단어를 쉽게 이해하다.</p>
     </header>
     ${searchBox("q-home")}
+    ${favRow()}
     ${recentRow()}
     <h2 class="label">분류</h2>
     <div class="cat-grid">
@@ -429,7 +452,7 @@ function pageTerm(id) {
 function pageSearch(q) {
   const res = q ? searchTerms(q) : [];
   const searches = store.get("searches"), seen = recentTerms();
-  const idle = `${searches.length ? `<section class="recent"><h2 class="label">최근 검색<button type="button" class="link" id="clearSearches">지우기</button></h2><div class="hscroll">${searches.map((x) => `<a class="chip" href="#/s/${encodeURIComponent(x)}">${esc(x)}</a>`).join("")}</div></section>` : ""}
+  const idle = `${favRow()}${searches.length ? `<section class="recent"><h2 class="label">최근 검색<button type="button" class="link" id="clearSearches">지우기</button></h2><div class="hscroll">${searches.map((x) => `<a class="chip" href="#/s/${encodeURIComponent(x)}">${esc(x)}</a>`).join("")}</div></section>` : ""}
     ${seen.length ? `<section class="recent"><h2 class="label">최근 본 용어</h2><div class="hscroll">${seen.map((t) => `<a class="chip" href="#/t/${t.id}">${esc(t.name)}</a>`).join("")}</div></section>` : ""}
     <h2 class="label">전체 용어 <span>${TERMS.length}</span></h2>${termList(TERMS)}`;
   view.innerHTML = `${header(null, null)}
@@ -571,6 +594,7 @@ function route() {
   else if (seg[0] === "c" && seg.length === 3) { pageDiagram(seg[1], seg[2], params.get("sel")); title = subName(seg[1], seg[2]); }
   else if (seg[0] === "t") title = pageTerm(seg[1]) || "";
   else if (seg[0] === "s") { nav = "search"; title = pageSearch(seg[1] || ""); }
+  else if (seg[0] === "fav") { pageFav(); title = "즐겨찾기"; }
   else if (seg[0] === "ai" && seg[1] === "tag") { nav = "tag"; pageTag(); title = "사진으로 용어 찾기"; }
   else if (seg[0] === "ai" && seg[1] === "tutor") { nav = "tutor"; pageTutor(params.get("q")); title = "AI 용어 튜터"; }
   else pageNotFound();
@@ -580,6 +604,13 @@ function route() {
   window.scrollTo(0, 0);
 }
 addEventListener("hashchange", route);
+// 즐겨찾기 별 (용어 상세 어디서나)
+view.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-fav]");
+  if (!b) return;
+  const on = store.toggle("favs", b.dataset.fav);
+  view.querySelectorAll(`[data-fav="${b.dataset.fav}"]`).forEach((x) => x.setAttribute("aria-pressed", on));
+});
 // 오프라인 지원 (sw.js). 미리보기처럼 등록이 막힌 환경에서는 조용히 건너뛴다
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 // 화면을 내리면 붙어 있는 탭 아래에 옅은 그림자를 준다

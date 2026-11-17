@@ -123,7 +123,7 @@ button { cursor: pointer; }
 .home .search:focus-within { border-color: var(--accent); }
 .label { display: flex; align-items: baseline; gap: 6px; margin: 26px 2px 10px; font-size: 0.8125rem; font-weight: 700; color: var(--ink-3); }
 .label span { font-weight: 500; }
-.label .link { margin-left: auto; padding: 4px 2px; border: 0; background: none; font-size: 0.78125rem; font-weight: 500; color: var(--ink-3); text-decoration: underline; text-underline-offset: 3px; }
+.label .link { margin-left: auto; padding: 4px 2px; border: 0; background: none; cursor: pointer; font-size: 0.78125rem; font-weight: 500; color: var(--ink-3); text-decoration: underline; text-underline-offset: 3px; }
 .recent .label { margin-top: 20px; }
 .hscroll { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 2px; }
 .hscroll::-webkit-scrollbar { display: none; }
@@ -312,7 +312,12 @@ h1.page { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; line-heig
 .eyebrow { --c: var(--accent); display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 0.78125rem; font-weight: 700; color: var(--ink-3); }
 .eyebrow a { color: var(--c); text-decoration: none; }
 .eyebrow span::before { content: "›"; margin-right: 6px; font-weight: 400; }
-.headword { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.headrow { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.headword { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
+.fav { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -4px -10px 0 0; padding: 0; border: 0; border-radius: 50%; background: none; }
+.fav svg { width: 24px; height: 24px; fill: none; stroke: var(--ink-3); stroke-width: 1.6; stroke-linejoin: round; transition: fill .15s, stroke .15s; }
+.fav[aria-pressed="true"] svg { fill: var(--accent); stroke: var(--accent); }
+.fav:active { background: var(--surface-2); }
 .headword h1, .headword h2 { margin: 0; font-family: var(--font-serif); font-size: 1.875rem; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; }
 .headword .h { font-size: 1rem; color: var(--ink-2); }
 .detail .short { margin: 10px 0 16px; padding: 0 0 16px; border-bottom: 1px solid var(--line); font-size: 0.9375rem; font-weight: 600; color: var(--ink-2); line-height: 1.5; }
