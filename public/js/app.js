@@ -139,6 +139,7 @@ function favRow() {
 }
 // ─────────────────── 답사 메모 ───────────────────
 let visitCtx = ""; // 답사지 화면에서 들어온 용어 화면의 답사지 id (#/t/용어?v=답사지)
+let confirming = ""; // 지울지 묻는 중인 메모: "note:메모id"
 let editing = null; // 편집 중인 메모: 새 메모는 "new:용어id", 고치는 중이면 메모 id
 let editorSeq = 0;
 const dateTime = (n) => `${timeLabel(n.created)}`;
@@ -149,7 +150,9 @@ function noteCardHTML(n, { showTerm = false, hideVisit = false } = {}) {
     <div class="note-head">${showTerm ? `<a class="note-term" href="#/t/${n.term}">${esc(TERM_BY_ID[n.term].name)}</a>` : ""}${n.author && n.author !== me ? `<span class="note-meta">${esc(n.author)}</span>` : ""}${!hideVisit && n.visit && getVisit(n.visit) ? `<span class="note-meta">답사지 ${esc(getVisit(n.visit).name)}</span>` : ""}<span class="note-meta">${esc(dateTime(n))}</span></div>
     ${n.text ? `<p class="note-text">${esc(n.text)}</p>` : ""}
     ${n.photos?.length ? `<div class="note-photos">${n.photos.map((p) => `<a class="ph" data-photo="${p}" href="#" target="_blank" rel="noopener" aria-label="사진 크게 보기"></a>`).join("")}</div>` : ""}
-    <div class="note-actions"><button type="button" class="link-btn" data-note-edit="${n.id}">수정</button><button type="button" class="link-btn" data-note-del="${n.id}">삭제</button></div>
+    ${confirming === `note:${n.id}`
+      ? `<div class="note-confirm" role="alert"><span>이 메모를 지울까요?</span><button type="button" class="link-btn danger" data-note-del-yes="${n.id}">지우기</button><button type="button" class="link-btn" data-confirm-no>취소</button></div>`
+      : `<div class="note-actions"><button type="button" class="link-btn" data-note-edit="${n.id}">수정</button><button type="button" class="link-btn" data-note-del="${n.id}">삭제</button></div>`}
   </article>`;
 }
 const visitSelectHTML = (sel) => {
@@ -275,13 +278,19 @@ view.addEventListener("click", (e) => {
   let el;
   if ((el = q("[data-memo-new]"))) openEditor(`new:${el.dataset.memoNew}`);
   else if ((el = q("[data-note-edit]"))) openEditor(el.dataset.noteEdit);
-  else if ((el = q("[data-note-del]"))) { if (confirm("이 메모를 지울까요? 되돌릴 수 없어요.")) deleteNote(el.dataset.noteDel).then(refreshMemos); }
+  else if ((el = q("[data-note-del]"))) { confirming = `note:${el.dataset.noteDel}`; refreshMemos(); }
+  else if ((el = q("[data-note-del-yes]"))) { confirming = ""; deleteNote(el.dataset.noteDelYes); refreshMemos(); }
+  else if (q("[data-confirm-no]")) { confirming = ""; refreshMemos(); }
+  else if ((el = q("[data-vrm-yes]"))) removeVisitTerm(el.dataset.vrmYes, true);
+  else if ((el = q("[data-vrm-no]"))) view.querySelector(`[data-vterm="${el.dataset.vrmNo}"] .vterm-confirm`)?.remove();
   else if ((el = q("[data-photo-remove]"))) { const m = el.closest(".mphoto"); if (m.hasAttribute("data-new")) removePhoto(m.dataset.pid).catch(() => {}); m.remove(); }
   else if ((el = q("[data-cancel]"))) closeEditor(el.closest("[data-editor]"), { discardNew: true });
   else if ((el = q("[data-export]"))) runExport(el.dataset.export, el);
   else if ((el = q("[data-vadd]"))) addVisitTerm(el.dataset.vadd);
   else if ((el = q("[data-vrm]"))) removeVisitTerm(el.dataset.vrm);
-  else if ((el = q("[data-vdel]"))) { if (confirm("이 답사지를 지울까요? 남긴 메모는 그대로 남아요.")) { deleteVisit(curVisit()?.id); location.hash = "#/me?tab=visits"; } }
+  else if ((el = q("[data-vdel]"))) el.closest("[data-vdel-box]").innerHTML = `<div class="note-confirm" role="alert"><span>이 답사지를 지울까요? 남긴 메모는 그대로 남아요.</span><button type="button" class="link-btn danger" data-vdel-yes>지우기</button><button type="button" class="link-btn" data-vdel-no>취소</button></div>`;
+  else if (q("[data-vdel-yes]")) { deleteVisit(curVisit()?.id); location.hash = "#/me?tab=visits"; }
+  else if ((el = q("[data-vdel-no]"))) el.closest("[data-vdel-box]").innerHTML = VDEL_BTN;
 });
 view.addEventListener("submit", (e) => {
   const f = e.target.closest("[data-editor]");
@@ -349,6 +358,7 @@ function pageMe(tab = "notes") {
 }
 const curVisit = () => { const id = view.querySelector("[data-visit-id]")?.dataset.visitId; return id ? getVisit(id) : null; };
 // 답사지 화면: 용어를 찾아 넣고, 넣은 용어마다 그 자리에서 메모한다
+const VDEL_BTN = `<button type="button" class="link-btn" data-vdel>이 답사지 지우기 (메모는 남아요)</button>`;
 const vtermHTML = (t, vid) => `<section class="vterm" data-vterm="${t.id}">
     <div class="vterm-head"><a href="#/t/${t.id}?v=${vid}"><b>${esc(t.name)}</b>${hanjaSpan(t)}<small>${esc(t.short)}</small></a><button type="button" class="rm" data-vrm="${t.id}" aria-label="${esc(t.name)} 답사지에서 빼기">${ICON_X}</button></div>
     <div class="memo" data-memo="${t.id}" data-visit="${vid}"></div>
@@ -368,13 +378,16 @@ function addVisitTerm(id) {
   if (find) find.value = ""; // 담고 나면 검색을 비워 다음 용어를 바로 찾게 한다
   renderVisitFind();
 }
-function removeVisitTerm(id) {
-  const v = curVisit();
+function removeVisitTerm(id, sure = false) {
+  const v = curVisit(), row = view.querySelector(`[data-vterm="${id}"]`);
   if (!v) return;
-  if (notesOf(id, v.id).length && !confirm("이 용어를 답사지에서 뺄까요? 남긴 메모는 지워지지 않아요.")) return;
+  if (!sure && notesOf(id, v.id).length) { // 메모가 있으면 화면 안에서 한 번 묻는다(브라우저 팝업은 막히는 곳이 있다)
+    if (!row?.querySelector(".vterm-confirm")) row?.querySelector(".vterm-head").insertAdjacentHTML("afterend", `<div class="note-confirm vterm-confirm" role="alert"><span>이 용어를 답사지에서 뺄까요? 남긴 메모는 지워지지 않아요.</span><button type="button" class="link-btn danger" data-vrm-yes="${id}">빼기</button><button type="button" class="link-btn" data-vrm-no="${id}">취소</button></div>`);
+    return;
+  }
   removeTermFromVisit(v.id, id);
   if (editing && editing.endsWith(id)) editing = null;
-  view.querySelector(`[data-vterm="${id}"]`)?.remove();
+  row?.remove();
   syncVisitEmpty();
   renderVisitFind();
 }
@@ -411,7 +424,7 @@ function pageVisit(id) {
             <label for="ve-date">날짜</label><input id="ve-date" name="date" type="date" value="${esc(v.date)}" />
             <button type="submit" class="btn">저장</button>
           </form>
-          <button type="button" class="link-btn" data-vdel>이 답사지 지우기 (메모는 남아요)</button>
+          <div data-vdel-box>${VDEL_BTN}</div>
         </details>
       </section>
     </div>`;
@@ -872,7 +885,7 @@ function pageNotFound() {
 const tabbar = document.querySelector(".tabbar");
 function route() {
   cleanup?.(); cleanup = null;
-  editing = null; releasePhotoURLs();
+  editing = null; confirming = ""; releasePhotoURLs();
   const [path, qs] = location.hash.replace(/^#/, "").split("?");
   const params = new URLSearchParams(qs || "");
   const seg = (path || "/").split("/").filter(Boolean).map(decodeURIComponent);

@@ -62,11 +62,11 @@ export function saveNote({ id, term, text, photos, visit }) {
   return note;
 }
 
-export async function deleteNote(id) {
+export function deleteNote(id) {
   const list = readNotes(), n = list.find((x) => x.id === id);
-  if (!n) return;
-  writeNotes(list.filter((x) => x.id !== id));
-  for (const p of n.photos ?? []) await removePhoto(p).catch(() => {});
+  if (!n || !writeNotes(list.filter((x) => x.id !== id))) return false;
+  for (const p of n.photos ?? []) removePhoto(p).catch(() => {}); // 사진 정리는 기다리지 않는다(사진 저장소가 막혀 있어도 메모 삭제는 끝난다)
+  return true;
 }
 
 // ───────── 날짜별 묶음 ─────────

@@ -444,6 +444,10 @@ body.no-scroll { overflow-y: hidden; }
 .mphoto button svg { width: 24px; height: 24px; padding: 6px; border-radius: 50%; background: var(--ink); fill: none; stroke: var(--accent-ink); stroke-width: 2.6; stroke-linecap: round; }
 .note-actions { display: flex; gap: 4px; margin: 2px 0 0 -12px; }
 .link-btn { min-height: 44px; padding: 0 12px; border: 0; background: none; color: var(--ink-2); font-size: 0.875rem; text-decoration: underline; text-underline-offset: 3px; }
+.note-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; font-size: 0.875rem; color: var(--ink-2); }
+.note-confirm span { margin-right: 8px; padding: 10px 0; }
+.link-btn.danger { color: var(--red); font-weight: 700; }
+.vterm-confirm { padding-bottom: 4px; }
 .memo-editor { display: grid; gap: 12px; margin: 4px 0 12px; }
 .memo-editor textarea { width: 100%; min-height: 112px; padding: 12px 14px; border: 1px solid var(--field-line); border-radius: var(--r-ctl); background: var(--surface); font-size: 1rem; line-height: 1.6; resize: vertical; }
 .memo-editor textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
