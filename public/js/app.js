@@ -5,7 +5,7 @@ import { renderFigure, mountFigure, figureTermIds } from "./figview.js";
 import { IDS_3D } from "./model3d.js";
 import { FIGURES } from "./figures.js";
 import { STRUCTURES, STRUCT_BY_KEY, DEFAULT_STRUCT, termIdOf } from "./structures.js";
-import { TAGS, MAX_PHOTOS_PER_NOTE, favStatus, termStatus, allVisits, getVisit, saveVisit, addTermsToVisit, removeTermFromVisit, deleteVisit, allNotes, notesOf, searchNotes, saveNote, deleteNote, addPhoto, removePhoto, photoURL, releasePhotoURLs,
+import { MAX_PHOTOS_PER_NOTE, allVisits, getVisit, saveVisit, addTermsToVisit, removeTermFromVisit, deleteVisit, allNotes, notesOf, searchNotes, saveNote, deleteNote, addPhoto, removePhoto, photoURL, releasePhotoURLs,
   authorName, setAuthorName, groupByDay, timeLabel, buildBackup, importBackup, buildNoteHTML } from "./notes.js";
 
 const view = document.getElementById("view");
@@ -143,10 +143,10 @@ let editing = null; // 편집 중인 메모: 새 메모는 "new:용어id", 고�
 let editorSeq = 0;
 const dateTime = (n) => `${timeLabel(n.created)}`;
 const photoThumb = (id, isNew = false) => `<div class="mphoto" data-pid="${id}"${isNew ? " data-new" : ""}><span class="ph" data-photo="${id}"></span><button type="button" data-photo-remove aria-label="사진 빼기">${ICON_X}</button></div>`;
-function noteCardHTML(n, { showTerm = false } = {}) {
+function noteCardHTML(n, { showTerm = false, hideVisit = false } = {}) {
   const me = authorName();
   return `<article class="note" data-note="${n.id}">
-    <div class="note-head">${showTerm ? `<a class="note-term" href="#/t/${n.term}">${esc(TERM_BY_ID[n.term].name)}</a>` : ""}${n.tag ? `<span class="note-tag t${TAGS.indexOf(n.tag)}">${esc(n.tag)}</span>` : ""}${n.author && n.author !== me ? `<span class="note-meta">${esc(n.author)}</span>` : ""}${n.visit && getVisit(n.visit) ? `<span class="note-meta">답사지 ${esc(getVisit(n.visit).name)}</span>` : ""}<span class="note-meta">${esc(dateTime(n))}</span></div>
+    <div class="note-head">${showTerm ? `<a class="note-term" href="#/t/${n.term}">${esc(TERM_BY_ID[n.term].name)}</a>` : ""}${n.author && n.author !== me ? `<span class="note-meta">${esc(n.author)}</span>` : ""}${!hideVisit && n.visit && getVisit(n.visit) ? `<span class="note-meta">답사지 ${esc(getVisit(n.visit).name)}</span>` : ""}<span class="note-meta">${esc(dateTime(n))}</span></div>
     ${n.text ? `<p class="note-text">${esc(n.text)}</p>` : ""}
     ${n.photos?.length ? `<div class="note-photos">${n.photos.map((p) => `<a class="ph" data-photo="${p}" href="#" target="_blank" rel="noopener" aria-label="사진 크게 보기"></a>`).join("")}</div>` : ""}
     <div class="note-actions"><button type="button" class="link-btn" data-note-edit="${n.id}">수정</button><button type="button" class="link-btn" data-note-del="${n.id}">삭제</button></div>
@@ -156,14 +156,13 @@ const visitSelectHTML = (sel) => {
   const vs = allVisits();
   return vs.length ? `<label class="field"><span>답사지</span><select name="visit"><option value="">선택 안 함</option>${vs.map((v) => `<option value="${v.id}"${v.id === sel ? " selected" : ""}>${esc(v.name)}${v.date ? ` (${esc(v.date)})` : ""}</option>`).join("")}</select></label>` : "";
 };
-function editorHTML(n, termId) {
-  const id = `memo-${++editorSeq}`, tag = n?.tag ?? "";
+function editorHTML(n, termId, fixedVisit = "") {
+  const id = `memo-${++editorSeq}`;
   return `<form class="memo-editor" data-editor data-term="${termId}"${n ? ` data-id="${n.id}"` : ""}>
     <label class="sr-only" for="${id}">메모</label>
     <textarea id="${id}" name="text" rows="4" maxlength="2000" placeholder="현장에서 본 것, 궁금한 점을 적어 두세요">${esc(n?.text ?? "")}</textarea>
-    <div class="memo-tags" role="group" aria-label="분류">${TAGS.map((t) => `<button type="button" class="chip tagchip" data-tag="${t}" aria-pressed="${t === tag}">${t}</button>`).join("")}</div>
-    ${visitSelectHTML(n ? n.visit ?? "" : visitCtx)}
-    <label class="check"><input type="checkbox" name="fav"${store.get("favs").includes(termId) ? " checked" : ""} />즐겨찾기에도 담기</label>
+    ${fixedVisit ? `<input type="hidden" name="visit" value="${fixedVisit}" />` : visitSelectHTML(n ? n.visit ?? "" : visitCtx)}
+    ${fixedVisit ? "" : `<label class="check"><input type="checkbox" name="fav"${store.get("favs").includes(termId) ? " checked" : ""} />즐겨찾기에도 담기</label>`}
     <div class="memo-photos" data-photos>${(n?.photos ?? []).map((p) => photoThumb(p)).join("")}</div>
     <div class="memo-up"><label class="btn">사진 찍기<input type="file" accept="image/*" capture="environment" data-addphoto /></label><label class="btn">앨범에서<input type="file" accept="image/*" multiple data-addphoto /></label></div>
     <div class="memo-btns"><button type="submit" class="btn primary">저장</button><button type="button" class="btn" data-cancel>취소</button></div>
@@ -181,11 +180,11 @@ function hydratePhotos(root) {
   });
 }
 function renderMemo(box) {
-  const id = box.dataset.memo, list = notesOf(id), adding = editing === `new:${id}`;
+  const id = box.dataset.memo, vid = box.dataset.visit || "", list = notesOf(id, vid), adding = editing === `new:${id}`;
   box.innerHTML = `<div class="memo-head"><h2 class="section-title">내 메모 <span>${list.length}</span></h2>${adding ? "" : `<button type="button" class="btn small" data-memo-new="${id}">메모 남기기</button>`}</div>
-    ${adding ? editorHTML(null, id) : ""}
-    ${list.map((n) => (editing === n.id ? editorHTML(n, id) : noteCardHTML(n))).join("")}
-    ${!list.length && !adding ? `<p class="memo-empty">현장에서 본 것을 적어 두면 여기에 쌓여요. 이 기기에만 저장돼요.</p>` : ""}`;
+    ${adding ? editorHTML(null, id, vid) : ""}
+    ${list.map((n) => (editing === n.id ? editorHTML(n, id, vid) : noteCardHTML(n, { hideVisit: !!vid }))).join("")}
+    ${!list.length && !adding ? `<p class="memo-empty">${vid ? "메모를 남겨 보세요." : "현장에서 본 것을 적어 두면 여기에 쌓여요. 이 기기에만 저장돼요."}</p>` : ""}`;
   hydratePhotos(box);
 }
 function renderMemoList() {
@@ -214,11 +213,11 @@ async function submitEditor(form) {
   if (!text && !pids.length) return showErr(form, "글이나 사진 중 하나는 있어야 해요.");
   const id = form.dataset.id;
   const prev = id ? allNotes().find((n) => n.id === id) : null;
-  const note = saveNote({ id, term: form.dataset.term, text, tag: form.querySelector('[data-tag][aria-pressed="true"]')?.dataset.tag ?? "", photos: pids, visit: form.elements.visit?.value });
+  const note = saveNote({ id, term: form.dataset.term, text, photos: pids, visit: form.elements.visit?.value });
   if (!note) return showErr(form, "저장하지 못했어요. 브라우저 저장 공간이 막혀 있거나 가득 찼을 수 있어요.");
   for (const p of prev?.photos ?? []) if (!pids.includes(p)) await removePhoto(p).catch(() => {});
   const term = form.dataset.term;
-  if (form.elements.fav.checked !== store.get("favs").includes(term)) {
+  if (form.elements.fav && form.elements.fav.checked !== store.get("favs").includes(term)) {
     const on = store.toggle("favs", term);
     view.querySelectorAll(`[data-fav="${term}"]`).forEach((x) => x.setAttribute("aria-pressed", on));
   }
@@ -277,15 +276,11 @@ view.addEventListener("click", (e) => {
   if ((el = q("[data-memo-new]"))) openEditor(`new:${el.dataset.memoNew}`);
   else if ((el = q("[data-note-edit]"))) openEditor(el.dataset.noteEdit);
   else if ((el = q("[data-note-del]"))) { if (confirm("이 메모를 지울까요? 되돌릴 수 없어요.")) deleteNote(el.dataset.noteDel).then(refreshMemos); }
-  else if ((el = q("[data-tag]"))) { const on = el.getAttribute("aria-pressed") === "true"; el.parentElement.querySelectorAll("[data-tag]").forEach((b) => b.setAttribute("aria-pressed", "false")); el.setAttribute("aria-pressed", String(!on)); }
   else if ((el = q("[data-photo-remove]"))) { const m = el.closest(".mphoto"); if (m.hasAttribute("data-new")) removePhoto(m.dataset.pid).catch(() => {}); m.remove(); }
   else if ((el = q("[data-cancel]"))) closeEditor(el.closest("[data-editor]"), { discardNew: true });
   else if ((el = q("[data-export]"))) runExport(el.dataset.export, el);
-  else if ((el = q("[data-favfilter]"))) { favFilter = el.dataset.favfilter; renderBoards(); }
-  else if ((el = q("[data-vadd]"))) { addTermsToVisit(curVisit()?.id, [el.dataset.vadd]); refreshVisit(); }
-  else if ((el = q("[data-vadd-all]"))) { addTermsToVisit(curVisit()?.id, HERITAGE.get(el.dataset.vaddAll) ?? []); refreshVisit(); }
-  else if ((el = q("[data-vfav]"))) { addTermsToVisit(curVisit()?.id, store.get("favs")); refreshVisit(); }
-  else if ((el = q("[data-vrm]"))) { removeTermFromVisit(curVisit()?.id, el.dataset.vrm); refreshVisit(); }
+  else if ((el = q("[data-vadd]"))) addVisitTerm(el.dataset.vadd);
+  else if ((el = q("[data-vrm]"))) removeVisitTerm(el.dataset.vrm);
   else if ((el = q("[data-vdel]"))) { if (confirm("이 답사지를 지울까요? 남긴 메모는 그대로 남아요.")) { deleteVisit(curVisit()?.id); location.hash = "#/me?tab=visits"; } }
 });
 view.addEventListener("submit", (e) => {
@@ -311,7 +306,7 @@ const HERITAGE = new Map(); // 대표 문화유산 이름 → 그 문화유산�
 for (const t of TERMS) for (const h of t.heritage ?? []) { if (!HERITAGE.has(h.name)) HERITAGE.set(h.name, []); HERITAGE.get(h.name).push(t.id); }
 const visitDate = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.date || ""); return m ? `${+m[2]}월 ${+m[3]}일` : ""; };
 function visitsTabHTML() {
-  const vs = allVisits();
+  const vs = allVisits(), notes = allNotes();
   return `<form class="visit-new" data-visit-new>
       <label for="v-name">새 답사지</label>
       <input id="v-name" name="name" type="text" list="v-names" maxlength="40" required placeholder="예: 안동 봉정사 극락전" autocomplete="off" />
@@ -321,9 +316,9 @@ function visitsTabHTML() {
       <button type="submit" class="btn primary">답사지 만들기</button>
       <p class="notice err" data-err role="alert" hidden></p>
     </form>
-    ${vs.length ? `<ul class="term-list">${vs.map((v) => { const st = termStatus(v.terms, (n) => n.visit === v.id);
-      return `<li><a href="#/v/${v.id}"><div><b>${esc(v.name)}</b><p>${esc([visitDate(v), st.total ? `용어 ${st.total}개 중 ${st.checked}개 확인` : "담은 용어 없음"].filter(Boolean).join(", "))}</p></div>${CHEVRON}</a></li>`; }).join("")}</ul>`
-      : `<p class="lead">가는 곳의 이름을 적어 답사지를 만들고, 그 안에 볼 용어를 담아 두세요. 그 답사지에서 남긴 메모와 ‘확인함’이 답사지별로 모여요. 이름을 적으면 그 문화유산의 대표 용어를 한꺼번에 담을 수 있어요.</p>`}`;
+    ${vs.length ? `<ul class="term-list">${vs.map((v) => { const memos = notes.filter((n) => n.visit === v.id).length;
+      return `<li><a href="#/v/${v.id}"><div><b>${esc(v.name)}</b><p>${esc([visitDate(v), `용어 ${v.terms.length}개`, memos ? `메모 ${memos}개` : ""].filter(Boolean).join(", "))}</p></div>${CHEVRON}</a></li>`; }).join("")}</ul>`
+      : `<p class="lead">가는 곳의 이름과 날짜로 답사지를 만들고, 그 안에 볼 용어를 넣어 두세요. 용어마다 바로 메모를 남길 수 있어요.</p>`}`
 }
 function pageMe(tab = "notes") {
   const f = favTerms();
@@ -335,8 +330,8 @@ function pageMe(tab = "notes") {
       <a href="#/me?tab=favs"${tab === "favs" ? ' class="on" aria-current="page"' : ""}>즐겨찾기 ${f.length}</a>
     </nav>
     ${tab === "visits" ? visitsTabHTML() : tab === "favs"
-      ? (f.length ? `<div id="fav-board"></div>`
-        : `<div class="empty-state"><b>아직 즐겨찾기한 용어가 없어요</b><p>용어 이름 옆의 별을 누르면 여기에 모여요. 답사 전에 볼 용어를 담아 두고, 현장에서 메모에 ‘확인함’을 붙이면 체크돼요.</p><a class="btn primary" href="#/s/">용어 찾아보기</a></div>`)
+      ? (f.length ? `<p class="lead">이 기기에만 저장돼요. 용어 화면의 별을 다시 누르면 빠져요.</p>${termList(f)}`
+        : `<div class="empty-state"><b>아직 즐겨찾기한 용어가 없어요</b><p>용어 이름 옆의 별을 누르면 여기에 모여요. 답사 전에 볼 용어를 담아 두세요.</p><a class="btn primary" href="#/s/">용어 찾아보기</a></div>`)
       : `<div class="author"><label for="me-name">내 이름</label><input id="me-name" type="text" maxlength="20" value="${esc(authorName())}" placeholder="조원에게 보낼 때 표시돼요 (선택)" autocomplete="off" /></div>
     <div id="memo-list"></div>
     <section class="share">
@@ -351,62 +346,47 @@ function pageMe(tab = "notes") {
     </section>`}`;
   bindSearch(view);
   renderMemoList();
-  renderBoards();
-}
-// 즐겨찾기 = 답사 전에 챙길 용어 목록. 메모와 이어서 확인한 것·다시 볼 것·질문을 보여 준다
-let favFilter = "all";
-const FAV_FILTERS = [
-  ["all", "전체", () => true], ["todo", "확인 전", (r) => !r.checked], ["again", "다시 볼 것", (r) => r.tags.has("다시 볼 것")],
-  ["ask", "질문", (r) => r.tags.has("질문")], ["done", "확인함", (r) => r.checked],
-];
-function boardHTML(st, { visitId = "", empty = "" } = {}) {
-  const pct = st.total ? Math.round((st.checked / st.total) * 100) : 0;
-  const rows = st.rows.filter((r) => FAV_FILTERS.find((x) => x[0] === favFilter)[2](r));
-  if (!st.total) return empty;
-  return `<div class="progress"><p><b>${st.total}개 중 ${st.checked}개 확인</b></p><div class="bar" role="img" aria-label="확인한 용어 ${pct}%"><i style="width:${pct}%"></i></div>
-      <p class="lead">현장에서 메모에 ‘확인함’을 붙이면 확인한 것으로 세요. 이 기기에만 저장돼요.</p></div>
-    <div class="filters" role="group" aria-label="걸러 보기">${FAV_FILTERS.map(([k, name, fn]) => `<button type="button" class="chip filterchip" data-favfilter="${k}" aria-pressed="${k === favFilter}">${name} ${st.rows.filter(fn).length}</button>`).join("")}</div>
-    ${rows.length ? `<ul class="term-list${visitId ? " removable" : ""}">${rows.map((r) => {
-      const t = TERM_BY_ID[r.id], n = r.notes.find((x) => x.text) ?? r.latest;
-      return `<li class="c-${t.cat}"><a href="#/t/${t.id}${visitId ? `?v=${visitId}` : ""}"><div><b>${esc(t.name)}</b>${hanjaSpan(t)}<p>${esc(t.short)}</p>
-        <p class="fav-memo">${r.latest ? `${r.latest.tag ? `<span class="note-tag t${TAGS.indexOf(r.latest.tag)}">${esc(r.latest.tag)}</span>` : ""}<span class="snip">${esc(n?.text ? n.text.replace(/\s+/g, " ").slice(0, 60) : "사진 메모")}</span>${r.notes.length > 1 ? `<span class="note-meta">외 ${r.notes.length - 1}개</span>` : ""}` : `<span class="snip none">메모 없음</span>`}</p></div>${visitId ? "" : CHEVRON}</a>${visitId ? `<button type="button" class="rm" data-vrm="${t.id}" aria-label="${esc(t.name)} 답사지에서 빼기">${ICON_X}</button>` : ""}</li>`;
-    }).join("")}</ul>` : `<p class="placeholder">이 조건에 맞는 용어가 없어요.</p>`}`;
-}
-function renderFavBoard() {
-  const box = view.querySelector("#fav-board");
-  if (box) box.innerHTML = boardHTML(favStatus(store.get("favs")));
 }
 const curVisit = () => { const id = view.querySelector("[data-visit-id]")?.dataset.visitId; return id ? getVisit(id) : null; };
-function renderVisitBoard() {
-  const box = view.querySelector("#visit-board"), v = curVisit();
-  if (box && v) box.innerHTML = boardHTML(termStatus(v.terms, (n) => n.visit === v.id), { visitId: v.id, empty: `<p class="placeholder">아직 담은 용어가 없어요. 아래에서 찾아 담아 보세요.</p>` });
+// 답사지 화면: 용어를 찾아 넣고, 넣은 용어마다 그 자리에서 메모한다
+const vtermHTML = (t, vid) => `<section class="vterm" data-vterm="${t.id}">
+    <div class="vterm-head"><a href="#/t/${t.id}?v=${vid}"><b>${esc(t.name)}</b>${hanjaSpan(t)}<small>${esc(t.short)}</small></a><button type="button" class="rm" data-vrm="${t.id}" aria-label="${esc(t.name)} 답사지에서 빼기">${ICON_X}</button></div>
+    <div class="memo" data-memo="${t.id}" data-visit="${vid}"></div>
+  </section>`;
+function syncVisitEmpty() {
+  const box = view.querySelector("#visit-terms");
+  if (box) box.dataset.empty = box.querySelector(".vterm") ? "" : "1";
 }
-const renderBoards = () => { renderFavBoard(); renderVisitBoard(); };
-
-// 답사지 화면
-const nameKey = (x) => x.toLowerCase().replace(/[\s·()\-]/g, "");
-function heritageFor(text, loose = false) {
-  const k = nameKey(text);
-  if (k.length < 2) return [];
-  return [...HERITAGE].filter(([n]) => { const h = nameKey(n); return h.includes(k) || (loose && k.length >= 3 && k.includes(h)); });
+function addVisitTerm(id) {
+  const v = curVisit(), t = TERM_BY_ID[id];
+  if (!v || !t || !addTermsToVisit(v.id, [id])) return;
+  const box = view.querySelector("#visit-terms");
+  box.insertAdjacentHTML("beforeend", vtermHTML(t, v.id));
+  mountMemo(box.lastElementChild);
+  syncVisitEmpty();
+  const find = view.querySelector("#v-find");
+  if (find) find.value = ""; // 담고 나면 검색을 비워 다음 용어를 바로 찾게 한다
+  renderVisitFind();
 }
-function renderVisitSuggest() {
-  const box = view.querySelector("#visit-suggest"), v = curVisit();
-  if (!box || !v) return;
-  const hs = heritageFor(v.name, true).map(([n, ids]) => [n, ids.filter((id) => !v.terms.includes(id))]).filter(([, ids]) => ids.length).slice(0, 3);
-  const favs = favTerms().filter((t) => !v.terms.includes(t.id));
-  box.innerHTML = `${hs.map(([n, ids]) => `<button type="button" class="btn" data-vadd-all="${esc(n)}">‘${esc(n)}’의 대표 용어 ${ids.length}개 담기</button>`).join("")}${favs.length ? `<button type="button" class="btn" data-vfav>즐겨찾기 ${favs.length}개 가져오기</button>` : ""}`;
+function removeVisitTerm(id) {
+  const v = curVisit();
+  if (!v) return;
+  if (notesOf(id, v.id).length && !confirm("이 용어를 답사지에서 뺄까요? 남긴 메모는 지워지지 않아요.")) return;
+  removeTermFromVisit(v.id, id);
+  if (editing && editing.endsWith(id)) editing = null;
+  view.querySelector(`[data-vterm="${id}"]`)?.remove();
+  syncVisitEmpty();
+  renderVisitFind();
 }
 function renderVisitFind() {
   const box = view.querySelector("#v-results"), v = curVisit(), q = view.querySelector("#v-find")?.value.trim() ?? "";
   if (!box || !v) return;
   if (!q) { box.innerHTML = ""; return; }
   const terms = searchTerms(q).filter((t) => !v.terms.includes(t.id)).slice(0, 8);
-  const hs = heritageFor(q).map(([n, ids]) => [n, ids.filter((id) => !v.terms.includes(id))]).filter(([, ids]) => ids.length).slice(0, 3);
-  box.innerHTML = `${hs.map(([n, ids]) => `<button type="button" class="btn" data-vadd-all="${esc(n)}">‘${esc(n)}’의 대표 용어 ${ids.length}개 모두 담기</button>`).join("")}
-    ${terms.length ? `<ul class="term-list pick">${terms.map((t) => `<li><button type="button" class="pickrow" data-vadd="${t.id}"><span><b>${esc(t.name)}</b>${hanjaSpan(t)}<small>${esc(t.short)}</small></span><span class="add">담기</span></button></li>`).join("")}</ul>` : hs.length ? "" : `<p class="placeholder">담을 수 있는 용어가 없어요. 이미 담았거나 이름이 달라요.</p>`}`;
+  box.innerHTML = terms.length
+    ? `<ul class="term-list pick">${terms.map((t) => `<li><button type="button" class="pickrow" data-vadd="${t.id}"><span><b>${esc(t.name)}</b>${hanjaSpan(t)}<small>${esc(t.short)}</small></span><span class="add">넣기</span></button></li>`).join("")}</ul>`
+    : `<p class="placeholder">넣을 수 있는 용어가 없어요. 이미 넣었거나 이름이 달라요.</p>`;
 }
-const refreshVisit = () => { renderVisitBoard(); renderVisitSuggest(); renderVisitFind(); };
 function pageVisit(id) {
   const v = getVisit(id);
   if (!v) { pageNotFound(); return ""; }
@@ -415,13 +395,13 @@ function pageVisit(id) {
       <a class="back" href="#/me?tab=visits">답사지 목록으로</a>
       <h1 class="page">${esc(v.name)}</h1>
       ${visitDate(v) ? `<p class="lead">${esc(visitDate(v))}</p>` : ""}
-      <div id="visit-board"></div>
       <section class="visit-add">
-        <h2 class="label">용어 담기</h2>
-        <div class="search">${ICON_SEARCH}<input id="v-find" type="search" placeholder="용어 이름으로 찾기" aria-label="답사지에 담을 용어 찾기" autocomplete="off" /></div>
+        <h2 class="label">용어 넣기</h2>
+        <div class="search">${ICON_SEARCH}<input id="v-find" type="search" placeholder="용어 이름으로 찾기" aria-label="답사지에 넣을 용어 찾기" autocomplete="off" /></div>
         <div id="v-results" class="visit-results"></div>
-        <div id="visit-suggest" class="visit-suggest"></div>
       </section>
+      <div id="visit-terms" data-empty="">${v.terms.map((x) => TERM_BY_ID[x]).filter(Boolean).map((t) => vtermHTML(t, v.id)).join("")}</div>
+      <p class="visit-empty placeholder">아직 넣은 용어가 없어요. 위에서 용어를 찾아 넣으면 여기에 메모 칸이 생겨요.</p>
       <section class="share">
         <div class="share-actions"><button type="button" class="btn primary" data-export="visit">이 답사지 노트 만들기</button></div>
         <p id="share-msg" class="notice" role="status" hidden></p>
@@ -436,7 +416,8 @@ function pageVisit(id) {
       </section>
     </div>`;
   bindSearch(view);
-  refreshVisit();
+  mountMemo(view.querySelector("#visit-terms"));
+  syncVisitEmpty();
   return v.name;
 }
 function recentRow() {
@@ -891,7 +872,7 @@ function pageNotFound() {
 const tabbar = document.querySelector(".tabbar");
 function route() {
   cleanup?.(); cleanup = null;
-  editing = null; favFilter = "all"; releasePhotoURLs();
+  editing = null; releasePhotoURLs();
   const [path, qs] = location.hash.replace(/^#/, "").split("?");
   const params = new URLSearchParams(qs || "");
   const seg = (path || "/").split("/").filter(Boolean).map(decodeURIComponent);
