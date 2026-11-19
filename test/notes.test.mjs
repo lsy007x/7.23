@@ -103,8 +103,63 @@ test("답사 노트 HTML: 즐겨찾기 진행 상황과 아직 확인 전인 용
   reset();
   const [a, b] = [TERMS[0].id, TERMS[1].id];
   N.saveNote({ term: a, text: "봤음", tag: "확인함", photos: [] });
-  const html = await N.buildNoteHTML([a, b]);
+  const html = await N.buildNoteHTML({ favIds: [a, b] });
   assert.ok(html.includes("2개 중 1개를 확인했어요"));
   assert.ok(html.includes(`아직 확인 전: ${TERMS[1].name}`));
-  assert.ok(!(await N.buildNoteHTML([])).includes("답사 전에 챙긴 용어"));
+  assert.ok(!(await N.buildNoteHTML({ favIds: [] })).includes("답사 전에 챙긴 용어"));
+});
+
+test("답사지: 만들기·용어 담기·빼기·지우기(메모는 남는다)", () => {
+  reset();
+  assert.equal(N.saveVisit({ name: "   " }), null);
+  const v = N.saveVisit({ name: "안동 봉정사 극락전", date: "2026-11-22", terms: [TERMS[0].id, TERMS[0].id, "nope"] });
+  assert.deepEqual(v.terms, [TERMS[0].id]);
+  assert.equal(N.saveVisit({ name: "x", date: "11/22" }).date, "");
+  N.addTermsToVisit(v.id, [TERMS[1].id, TERMS[0].id]);
+  assert.deepEqual(N.getVisit(v.id).terms, [TERMS[0].id, TERMS[1].id]);
+  N.removeTermFromVisit(v.id, TERMS[0].id);
+  assert.deepEqual(N.getVisit(v.id).terms, [TERMS[1].id]);
+  const n = N.saveNote({ term: TERMS[1].id, text: "남는 메모", visit: v.id, photos: [] });
+  N.deleteVisit(v.id);
+  assert.equal(N.getVisit(v.id), null);
+  assert.equal(N.allNotes().find((x) => x.id === n.id).text, "남는 메모");
+});
+
+test("답사지를 골라 적은 메모의 용어는 그 답사지에 담기고, 현황은 그 답사지의 메모만 센다", () => {
+  reset();
+  const [a, b] = [TERMS[0].id, TERMS[1].id];
+  const v1 = N.saveVisit({ name: "가 답사지", terms: [b] }), v2 = N.saveVisit({ name: "나 답사지", terms: [a, b] });
+  N.saveNote({ term: a, text: "가에서", tag: "확인함", visit: v1.id, photos: [] });
+  assert.deepEqual(N.getVisit(v1.id).terms.sort(), [a, b].sort());
+  N.saveNote({ term: b, text: "나에서", tag: "확인함", visit: v2.id, photos: [] });
+  const s1 = N.termStatus(N.getVisit(v1.id).terms, (n) => n.visit === v1.id), s2 = N.termStatus(N.getVisit(v2.id).terms, (n) => n.visit === v2.id);
+  assert.equal(s1.checked, 1); assert.equal(s2.checked, 1);
+  const keep = N.saveNote({ id: N.allNotes()[0].id, term: N.allNotes()[0].term, text: "고침", photos: [] });
+  assert.ok(keep.visit, "visit을 넘기지 않고 고치면 기존 답사지를 유지");
+});
+
+test("답사 노트 HTML(답사지): 그 답사지의 메모와 진행 상황만 들어간다", async () => {
+  reset();
+  const [a, b] = [TERMS[0].id, TERMS[1].id];
+  const v = N.saveVisit({ name: "봉정사", date: "2026-11-22", terms: [a, b] });
+  N.saveNote({ term: a, text: "여기서 적음", tag: "확인함", visit: v.id, photos: [] });
+  N.saveNote({ term: b, text: "다른 곳에서 적음", photos: [] });
+  const html = await N.buildNoteHTML({ visitId: v.id });
+  assert.ok(html.includes("답사 노트: 봉정사") && html.includes("2026-11-22"));
+  assert.ok(html.includes("여기서 적음") && !html.includes("다른 곳에서 적음"));
+  assert.ok(html.includes("2개 중 1개를 확인했어요") && html.includes(`아직 확인 전: ${TERMS[1].name}`));
+});
+
+test("백업 파일에 답사지가 들어 있고, 가져오면 새 답사지는 추가·같은 id는 나중에 고친 쪽", async () => {
+  reset();
+  const v = N.saveVisit({ name: "내 답사지", terms: [TERMS[0].id] });
+  const file = JSON.parse(await N.buildBackup());
+  assert.equal(file.visits.length, 1);
+  reset();
+  N.saveVisit({ id: v.id, name: "옛 이름", terms: [] });
+  const r1 = await N.importBackup(JSON.stringify(file));
+  assert.equal(r1.visits, 1);
+  assert.equal(N.getVisit(v.id).name, "내 답사지");
+  const r2 = await N.importBackup(JSON.stringify(file));
+  assert.equal(r2.visits, 0);
 });

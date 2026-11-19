@@ -469,6 +469,26 @@ body.no-scroll { overflow-y: hidden; }
 .fav-memo .snip { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fav-memo .snip.none { color: var(--ink-3); }
 .fav-memo .note-meta, .fav-memo .note-tag { flex: none; white-space: nowrap; }
+.visit-new { display: grid; gap: 6px; margin: 12px 0; }
+.visit-new label, .field span { font-size: 0.875rem; color: var(--ink-2); }
+.visit-new input, .field select { min-height: 44px; padding: 0 12px; border: 1px solid var(--field-line); border-radius: var(--r-ctl); background: var(--surface); font-size: 1rem; }
+.visit-new .btn { margin-top: 6px; }
+.field { display: grid; gap: 4px; }
+.visit-banner { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; padding: 0 12px; border-radius: var(--r-ctl); background: var(--accent-soft); color: var(--accent); font-size: 0.875rem; }
+.visit-banner b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.visit-banner a { display: inline-flex; align-items: center; min-height: 44px; margin-left: auto; color: inherit; font-weight: 700; white-space: nowrap; }
+.back { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; color: var(--ink-2); font-size: 0.875rem; }
+.term-list.removable li { display: flex; align-items: center; }
+.term-list.removable li > a { flex: 1; min-width: 0; }
+.rm { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-right: 4px; padding: 0; border: 0; background: none; }
+.rm svg { width: 20px; height: 20px; fill: none; stroke: var(--ink-3); stroke-width: 2; stroke-linecap: round; }
+.visit-add .search { margin-bottom: 8px; }
+.visit-results, .visit-suggest { display: grid; gap: 8px; margin-bottom: 8px; }
+.pickrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 8px 16px; border: 0; background: none; text-align: left; }
+.pickrow:active { background: var(--surface-2); }
+.pickrow small { display: block; font-size: 0.8125rem; color: var(--ink-2); }
+.pickrow .add { flex: none; font-size: 0.875rem; font-weight: 700; color: var(--accent); }
+.visit-edit summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--ink-2); font-size: 0.875rem; }
 .author { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; }
 .author label { flex: none; font-size: 0.875rem; color: var(--ink-2); }
 .author input { flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--field-line); border-radius: var(--r-ctl); background: var(--surface); font-size: 1rem; }
