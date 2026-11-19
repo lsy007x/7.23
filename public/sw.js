@@ -1,5 +1,5 @@
 // 오프라인 지원: 한 번 열어 본 뒤에는 신호가 없어도 사전·도면이 열린다 (AI 기능 제외)
-const CACHE = "tamsaek-v1";
+const CACHE = "tamsaek-v2";
 const CORE = [
   "./",
   "index.html",
@@ -14,6 +14,7 @@ const CORE = [
   "js/figures.js",
   "js/figview.js",
   "js/model3d.js",
+  "js/notes.js",
   "js/rag.js",
   "js/regions.js",
   "js/regions_manual.js",

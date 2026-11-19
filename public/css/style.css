@@ -2,6 +2,7 @@
  * floor: 0 FAIL · fixed: 12 (7a, 10a, 34, 38iii, 39a, 40, 48, 49a, 54, 56, 67, 75) · structural: 0 printed
  * built: the project · redesign: polish · v2.0.0 */
 /* Hallmark · waive 7b · --bg and --surface are #ffffff by the owner's written request · the scanned drawings in TAMSAEK sit on white paper, so the owner keeps the base pure white */
+/* Hallmark · dismissed F19 · the fourth weight is the quiet 500 on counts beside headings, never a display weight */
 /* Hallmark · answered F7 · list containers share one recipe on purpose: this is an app screen with one container style */
 /* Hallmark · reworded "간주석 竿柱石" to "간주석" · 38iii moved the hanja gloss out of the heading, it still shows beside it */
 /* Hallmark · reworded "TAMSAEK-H는 모바일 전용 웹입니다." to "모바일 전용 웹입니다." · 67 names the capitals */
@@ -310,7 +311,7 @@ h1.page { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; line-heig
 .detail { margin: 12px 0; padding: 20px 18px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); }
 .detail[hidden] { display: none; }
 .eyebrow { --c: var(--accent); display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 0.78125rem; font-weight: 700; color: var(--ink-3); }
-.eyebrow a { color: var(--c); text-decoration: none; }
+.eyebrow a { padding: 10px 0; margin: -10px 0; color: var(--c); text-decoration: none; }
 .eyebrow span::before { content: "›"; margin-right: 6px; font-weight: 400; }
 .headrow { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .headword { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
@@ -420,6 +421,47 @@ body.no-scroll { overflow-y: hidden; }
 .composer { position: sticky; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 6px); display: flex; align-items: flex-end; gap: 8px; padding: 8px 0; background: linear-gradient(transparent, var(--bg) 30%); }
 .composer textarea { flex: 1; min-height: 48px; max-height: 120px; padding: 11px 14px; border: 1px solid var(--field-line); border-radius: var(--r-ctl); background: var(--surface); box-shadow: var(--shadow-sm); font-size: 1rem; resize: none; }
 .composer textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+
+/* ───── 답사 메모 ───── */
+.memo { margin-top: 20px; border-top: 1px solid var(--line); }
+.memo-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.memo-head .section-title { margin: 12px 0 8px; }
+.section-title span, .label span { margin-left: 4px; font-weight: 500; }
+.btn.small { min-height: 44px; padding: 0 14px; font-size: 0.875rem; }
+.memo-empty { margin: 0 0 8px; font-size: 0.875rem; color: var(--ink-2); line-height: 1.6; }
+.note { padding: 12px 0; border-top: 1px solid var(--line); }
+.memo-head + .note, .memo-head + .memo-editor + .note { border-top: 0; }
+.note-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; }
+.note-term { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; margin: -8px 0; font-family: var(--font-serif); font-size: 1.0625rem; font-weight: 700; text-decoration: none; }
+.note-tag { padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 0.75rem; font-weight: 700; }
+.note-tag.t0 { background: var(--accent-soft); color: var(--accent); }
+.note-tag.t1 { background: var(--warn-soft); color: var(--warn-ink); }
+.note-meta { font-size: 0.75rem; color: var(--ink-3); }
+.note-text { margin: 6px 0 0; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-photos, .memo-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.note-photos { margin-top: 8px; }
+.ph { display: block; width: 88px; height: 88px; border-radius: 10px; overflow: hidden; background: var(--surface-2); }
+.ph img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mphoto { position: relative; }
+.mphoto button { position: absolute; top: -14px; right: -14px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: none; }
+.mphoto button svg { width: 24px; height: 24px; padding: 6px; border-radius: 50%; background: var(--ink); fill: none; stroke: var(--accent-ink); stroke-width: 2.6; stroke-linecap: round; }
+.note-actions { display: flex; gap: 4px; margin: 2px 0 0 -12px; }
+.link-btn { min-height: 44px; padding: 0 12px; border: 0; background: none; color: var(--ink-2); font-size: 0.875rem; text-decoration: underline; text-underline-offset: 3px; }
+.memo-editor { display: grid; gap: 12px; margin: 4px 0 12px; }
+.memo-editor textarea { width: 100%; min-height: 112px; padding: 12px 14px; border: 1px solid var(--field-line); border-radius: var(--r-ctl); background: var(--surface); font-size: 1rem; line-height: 1.6; resize: vertical; }
+.memo-editor textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.memo-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tagchip[aria-pressed="true"] { background: var(--ink); color: var(--accent-ink); font-weight: 700; }
+.memo-up, .memo-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.memo-up input, .share-actions input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.memo-up label:focus-within, .share-actions label:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.author { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; }
+.author label { flex: none; font-size: 0.875rem; color: var(--ink-2); }
+.author input { flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--field-line); border-radius: var(--r-ctl); background: var(--surface); font-size: 1rem; }
+.daygroup .label { margin-top: 20px; }
+.daygroup .note:first-of-type { border-top: 0; }
+.share { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
+.share-actions { display: grid; gap: 8px; margin-bottom: 12px; }
 
 @keyframes pulse { from { opacity: 1; } to { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) {

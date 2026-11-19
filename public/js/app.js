@@ -5,6 +5,8 @@ import { renderFigure, mountFigure, figureTermIds } from "./figview.js";
 import { IDS_3D } from "./model3d.js";
 import { FIGURES } from "./figures.js";
 import { STRUCTURES, STRUCT_BY_KEY, DEFAULT_STRUCT, termIdOf } from "./structures.js";
+import { TAGS, MAX_PHOTOS_PER_NOTE, allNotes, notesOf, searchNotes, saveNote, deleteNote, addPhoto, removePhoto, photoURL, releasePhotoURLs,
+  authorName, setAuthorName, groupByDay, timeLabel, buildBackup, importBackup, buildNoteHTML } from "./notes.js";
 
 const view = document.getElementById("view");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -124,6 +126,7 @@ function detailHTML(t, { showMapLink = true, h = "h2" } = {}) {
       <a class="btn" href="${photoUrl(t)}" target="_blank" rel="noopener">실제 사진 보기</a>
       <a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${t.name}에 대해 설명해줘`)}">AI 튜터에게 묻기</a>
     </div>
+    <section class="memo" data-memo="${t.id}" aria-label="내 메모"></section>
     <a class="khs-link" href="${PHOTO_SITE}" target="_blank" rel="noopener"><span><b>국가유산 디지털 서비스</b><small>공식 사진·도면·3D 자료</small></span><i class="go">${ARROW}</i></a>
     <p class="meta"><b>출처</b>${esc(t.source)}</p>
     ${t.heritageSource ? `<p class="meta sub"><b>문화유산 근거</b>${esc(t.heritageSource)}</p>` : ""}`;
@@ -134,13 +137,169 @@ function favRow() {
   const f = favTerms();
   return f.length ? `<section class="recent"><h2 class="label">즐겨찾기 <span>${f.length}</span><a class="link" href="#/fav">모두 보기</a></h2><div class="hscroll">${f.slice(0, 12).map((t) => `<a class="chip" href="#/t/${t.id}">${esc(t.name)}</a>`).join("")}</div></section>` : "";
 }
-function pageFav() {
+// ─────────────────── 답사 메모 ───────────────────
+let editing = null; // 편집 중인 메모: 새 메모는 "new:용어id", 고치는 중이면 메모 id
+let editorSeq = 0;
+const dateTime = (n) => `${timeLabel(n.created)}`;
+const photoThumb = (id, isNew = false) => `<div class="mphoto" data-pid="${id}"${isNew ? " data-new" : ""}><span class="ph" data-photo="${id}"></span><button type="button" data-photo-remove aria-label="사진 빼기">${ICON_X}</button></div>`;
+function noteCardHTML(n, { showTerm = false } = {}) {
+  const me = authorName();
+  return `<article class="note" data-note="${n.id}">
+    <div class="note-head">${showTerm ? `<a class="note-term" href="#/t/${n.term}">${esc(TERM_BY_ID[n.term].name)}</a>` : ""}${n.tag ? `<span class="note-tag t${TAGS.indexOf(n.tag)}">${esc(n.tag)}</span>` : ""}${n.author && n.author !== me ? `<span class="note-meta">${esc(n.author)}</span>` : ""}<span class="note-meta">${esc(dateTime(n))}</span></div>
+    ${n.text ? `<p class="note-text">${esc(n.text)}</p>` : ""}
+    ${n.photos?.length ? `<div class="note-photos">${n.photos.map((p) => `<a class="ph" data-photo="${p}" href="#" target="_blank" rel="noopener" aria-label="사진 크게 보기"></a>`).join("")}</div>` : ""}
+    <div class="note-actions"><button type="button" class="link-btn" data-note-edit="${n.id}">수정</button><button type="button" class="link-btn" data-note-del="${n.id}">삭제</button></div>
+  </article>`;
+}
+function editorHTML(n, termId) {
+  const id = `memo-${++editorSeq}`, tag = n?.tag ?? "";
+  return `<form class="memo-editor" data-editor data-term="${termId}"${n ? ` data-id="${n.id}"` : ""}>
+    <label class="sr-only" for="${id}">메모</label>
+    <textarea id="${id}" name="text" rows="4" maxlength="2000" placeholder="현장에서 본 것, 궁금한 점을 적어 두세요">${esc(n?.text ?? "")}</textarea>
+    <div class="memo-tags" role="group" aria-label="분류">${TAGS.map((t) => `<button type="button" class="chip tagchip" data-tag="${t}" aria-pressed="${t === tag}">${t}</button>`).join("")}</div>
+    <div class="memo-photos" data-photos>${(n?.photos ?? []).map((p) => photoThumb(p)).join("")}</div>
+    <div class="memo-up"><label class="btn">사진 찍기<input type="file" accept="image/*" capture="environment" data-addphoto /></label><label class="btn">앨범에서<input type="file" accept="image/*" multiple data-addphoto /></label></div>
+    <div class="memo-btns"><button type="submit" class="btn primary">저장</button><button type="button" class="btn" data-cancel>취소</button></div>
+    <p class="notice err" data-err role="alert" hidden></p>
+  </form>`;
+}
+function hydratePhotos(root) {
+  root.querySelectorAll("[data-photo]:not([data-done])").forEach((el) => {
+    el.dataset.done = "1";
+    photoURL(el.dataset.photo).then((u) => {
+      if (!u || !el.isConnected) return;
+      if (el.tagName === "A") el.href = u;
+      el.innerHTML = `<img src="${u}" alt="메모 사진" />`;
+    }).catch(() => {});
+  });
+}
+function renderMemo(box) {
+  const id = box.dataset.memo, list = notesOf(id), adding = editing === `new:${id}`;
+  box.innerHTML = `<div class="memo-head"><h2 class="section-title">내 메모 <span>${list.length}</span></h2>${adding ? "" : `<button type="button" class="btn small" data-memo-new="${id}">메모 남기기</button>`}</div>
+    ${adding ? editorHTML(null, id) : ""}
+    ${list.map((n) => (editing === n.id ? editorHTML(n, id) : noteCardHTML(n))).join("")}
+    ${!list.length && !adding ? `<p class="memo-empty">현장에서 본 것을 적어 두면 여기에 쌓여요. 이 기기에만 저장돼요.</p>` : ""}`;
+  hydratePhotos(box);
+}
+function renderMemoList() {
+  const box = view.querySelector("#memo-list");
+  if (!box) return;
+  const notes = allNotes();
+  box.innerHTML = notes.length
+    ? groupByDay(notes).map((g) => `<section class="daygroup"><h2 class="label">${esc(g.label)}<span>${g.notes.length}</span></h2>${g.notes.map((n) => (editing === n.id ? editorHTML(n, n.term) : noteCardHTML(n, { showTerm: true }))).join("")}</section>`).join("")
+    : `<div class="empty-state"><b>아직 메모가 없어요</b><p>용어 화면에서 "메모 남기기"를 누르면 여기에 날짜별로 모여요.</p><a class="btn primary" href="#/s/">용어 찾아보기</a></div>`;
+  const c = view.querySelector("[data-memo-count]");
+  if (c) c.textContent = notes.length;
+  hydratePhotos(box);
+}
+const mountMemo = (root) => root.querySelectorAll(".memo[data-memo]").forEach(renderMemo);
+function refreshMemos() { mountMemo(view); renderMemoList(); }
+const openEditor = (id) => { editing = id; refreshMemos(); view.querySelector("[data-editor] textarea")?.focus(); };
+function closeEditor(form, { discardNew = false } = {}) {
+  if (discardNew) form.querySelectorAll("[data-pid][data-new]").forEach((x) => removePhoto(x.dataset.pid).catch(() => {}));
+  editing = null; refreshMemos();
+}
+const showErr = (form, msg) => { const e = form.querySelector("[data-err]"); e.textContent = msg; e.hidden = !msg; };
+
+async function submitEditor(form) {
+  const text = form.elements.text.value.trim();
+  const pids = [...form.querySelectorAll("[data-pid]")].map((x) => x.dataset.pid);
+  if (!text && !pids.length) return showErr(form, "글이나 사진 중 하나는 있어야 해요.");
+  const id = form.dataset.id;
+  const prev = id ? allNotes().find((n) => n.id === id) : null;
+  const note = saveNote({ id, term: form.dataset.term, text, tag: form.querySelector('[data-tag][aria-pressed="true"]')?.dataset.tag ?? "", photos: pids });
+  if (!note) return showErr(form, "저장하지 못했어요. 브라우저 저장 공간이 막혀 있거나 가득 찼을 수 있어요.");
+  for (const p of prev?.photos ?? []) if (!pids.includes(p)) await removePhoto(p).catch(() => {});
+  editing = null; refreshMemos();
+}
+async function addPhotosTo(input) {
+  const form = input.closest("[data-editor]"), wrap = form.querySelector("[data-photos]");
+  showErr(form, "");
+  for (const f of input.files) {
+    if (wrap.children.length >= MAX_PHOTOS_PER_NOTE) { showErr(form, `사진은 메모 하나에 ${MAX_PHOTOS_PER_NOTE}장까지 넣을 수 있어요.`); break; }
+    try { const pid = await addPhoto(f); wrap.insertAdjacentHTML("beforeend", photoThumb(pid, true)); hydratePhotos(wrap); }
+    catch { showErr(form, "사진을 저장하지 못했어요. 다른 사진으로 해 보거나 저장 공간을 확인해 주세요."); }
+  }
+  input.value = "";
+}
+
+// 파일로 내보낸다: 공유창을 쓸 수 있으면 공유(메신저·메일로 바로), 아니면 내려받기
+async function deliver(name, mime, text) {
+  const file = new File([text], name, { type: mime });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return "공유했어요."; }
+    catch (e) { if (e.name === "AbortError") return "취소했어요."; }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return `‘${name}’ 파일로 저장했어요. 다운로드 폴더를 확인해 보세요.`;
+}
+const today = () => new Date().toISOString().slice(0, 10);
+async function runExport(kind, btn) {
+  const out = view.querySelector("#share-msg");
+  btn.disabled = true; out.hidden = false; out.className = "notice"; out.textContent = "파일을 만드는 중…";
+  try {
+    out.textContent = kind === "html" ? await deliver(`답사노트-${today()}.html`, "text/html", await buildNoteHTML())
+      : await deliver(`tamsaek-백업-${today()}.json`, "application/json", await buildBackup());
+  } catch { out.className = "notice err"; out.textContent = "파일을 만들지 못했어요. 사진이 많으면 한 번에 만들기 어려울 수 있어요."; }
+  btn.disabled = false;
+}
+async function runImport(input) {
+  const out = view.querySelector("#share-msg");
+  out.hidden = false; out.className = "notice";
+  try {
+    const r = await importBackup(await input.files[0].text());
+    out.textContent = `불러왔어요. 새 메모 ${r.added}개, 고쳐진 메모 ${r.updated}개, 건너뜀 ${r.skipped}개. 내 메모는 지우지 않았어요.`;
+    refreshMemos();
+  } catch (e) { out.className = "notice err"; out.textContent = e.message || "불러오지 못했어요."; }
+  input.value = "";
+}
+
+view.addEventListener("click", (e) => {
+  const q = (sel) => e.target.closest(sel);
+  let el;
+  if ((el = q("[data-memo-new]"))) openEditor(`new:${el.dataset.memoNew}`);
+  else if ((el = q("[data-note-edit]"))) openEditor(el.dataset.noteEdit);
+  else if ((el = q("[data-note-del]"))) { if (confirm("이 메모를 지울까요? 되돌릴 수 없어요.")) deleteNote(el.dataset.noteDel).then(refreshMemos); }
+  else if ((el = q("[data-tag]"))) { const on = el.getAttribute("aria-pressed") === "true"; el.parentElement.querySelectorAll("[data-tag]").forEach((b) => b.setAttribute("aria-pressed", "false")); el.setAttribute("aria-pressed", String(!on)); }
+  else if ((el = q("[data-photo-remove]"))) { const m = el.closest(".mphoto"); if (m.hasAttribute("data-new")) removePhoto(m.dataset.pid).catch(() => {}); m.remove(); }
+  else if ((el = q("[data-cancel]"))) closeEditor(el.closest("[data-editor]"), { discardNew: true });
+  else if ((el = q("[data-export]"))) runExport(el.dataset.export, el);
+});
+view.addEventListener("submit", (e) => { const f = e.target.closest("[data-editor]"); if (f) { e.preventDefault(); submitEditor(f); } });
+view.addEventListener("change", (e) => {
+  if (e.target.matches("[data-addphoto]")) addPhotosTo(e.target);
+  else if (e.target.matches("#import-file") && e.target.files[0]) runImport(e.target);
+  else if (e.target.matches("#me-name")) setAuthorName(e.target.value);
+});
+
+// 내 기록: 메모와 즐겨찾기
+function pageMe(tab = "notes") {
   const f = favTerms();
   view.innerHTML = `${header(null, null)}
-    <h1 class="page">즐겨찾기 <span class="count">${f.length}</span></h1>
-    ${f.length ? `<p class="lead">이 기기에만 저장돼요. 용어 화면의 별을 다시 누르면 빠져요.</p>${termList(f)}`
-      : `<div class="empty-state"><b>아직 즐겨찾기한 용어가 없어요</b><p>용어 이름 옆의 별을 누르면 여기에 모여요. 답사 전에 볼 용어를 담아 두세요.</p><a class="btn primary" href="#/s/">용어 찾아보기</a></div>`}`;
+    <h1 class="page">내 기록</h1>
+    <nav class="sub-tabs" aria-label="내 기록">
+      <a href="#/me"${tab === "notes" ? ' class="on" aria-current="page"' : ""}>메모 <span data-memo-count>${allNotes().length}</span></a>
+      <a href="#/me?tab=favs"${tab === "favs" ? ' class="on" aria-current="page"' : ""}>즐겨찾기 ${f.length}</a>
+    </nav>
+    ${tab === "favs"
+      ? (f.length ? `<p class="lead">이 기기에만 저장돼요. 용어 화면의 별을 다시 누르면 빠져요.</p>${termList(f)}`
+        : `<div class="empty-state"><b>아직 즐겨찾기한 용어가 없어요</b><p>용어 이름 옆의 별을 누르면 여기에 모여요. 답사 전에 볼 용어를 담아 두세요.</p><a class="btn primary" href="#/s/">용어 찾아보기</a></div>`)
+      : `<div class="author"><label for="me-name">내 이름</label><input id="me-name" type="text" maxlength="20" value="${esc(authorName())}" placeholder="조원에게 보낼 때 표시돼요 (선택)" autocomplete="off" /></div>
+    <div id="memo-list"></div>
+    <section class="share">
+      <h2 class="label">내보내기와 백업</h2>
+      <p class="lead">메모는 이 휴대폰에만 저장되고 서버로 보내지 않아요. 휴대폰을 바꾸거나 브라우저 데이터를 지우면 사라지니 가끔 백업해 두세요.</p>
+      <div class="share-actions">
+        <button type="button" class="btn primary" data-export="html">답사 노트 만들기</button>
+        <button type="button" class="btn" data-export="json">백업·공유 파일 저장</button>
+        <label class="btn">조원 파일 불러오기<input id="import-file" type="file" accept=".json,application/json" /></label>
+      </div>
+      <p id="share-msg" class="notice" role="status" hidden></p>
+    </section>`}`;
   bindSearch(view);
+  renderMemoList();
 }
 function recentRow() {
   const r = recentTerms().slice(0, 8);
@@ -417,6 +576,7 @@ async function pageDiagram(catId, subId, sel) {
     const t = id && TERM_BY_ID[id];
     if (is3D && t && STRUCT_OF_TERM[id]) setStruct(STRUCT_OF_TERM[id]); // 구조 용어를 고르면 그 구조의 모델로 바꾼다
     const shown = t ? selectFn(id) : selectFn(null);
+    if (id !== currentId) editing = null;
     currentId = t ? id : null;
     if (t) store.push("terms", id, 12);
     view.querySelector("#clearSel")?.toggleAttribute("hidden", !currentId);
@@ -424,6 +584,7 @@ async function pageDiagram(catId, subId, sel) {
     if (!t) { detail.hidden = true; ph.hidden = !hasFigure; return; }
     detail.innerHTML = detailHTML(t, { showMapLink: !hasFigure }) + (hasFigure && shown === false ? `<p class="notice">이 도면에는 해당 부재가 따로 표시되어 있지 않습니다.</p>` : "");
     detail.hidden = false; ph.hidden = true;
+    mountMemo(detail);
     if (scroll) view.querySelector(hasFigure ? "#fig" : "#detail").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   if (sel) {
@@ -446,18 +607,22 @@ function pageTerm(id) {
     </nav>` : "";
   view.innerHTML = `${header(t.cat, catName(t.cat))}<article class="detail">${detailHTML(t, { h: "h1" })}</article>${pager}`;
   bindSearch(view);
+  mountMemo(view);
   return t.name;
 }
 
 function pageSearch(q) {
   const res = q ? searchTerms(q) : [];
+  const noteHits = searchNotes(q);
   const searches = store.get("searches"), seen = recentTerms();
   const idle = `${favRow()}${searches.length ? `<section class="recent"><h2 class="label">최근 검색<button type="button" class="link" id="clearSearches">지우기</button></h2><div class="hscroll">${searches.map((x) => `<a class="chip" href="#/s/${encodeURIComponent(x)}">${esc(x)}</a>`).join("")}</div></section>` : ""}
     ${seen.length ? `<section class="recent"><h2 class="label">최근 본 용어</h2><div class="hscroll">${seen.map((t) => `<a class="chip" href="#/t/${t.id}">${esc(t.name)}</a>`).join("")}</div></section>` : ""}
     <h2 class="label">전체 용어 <span>${TERMS.length}</span></h2>${termList(TERMS)}`;
   view.innerHTML = `${header(null, null)}
     ${q ? `<h1 class="page">‘${esc(q)}’ <span class="count">${res.length}건</span></h1>` : `<h1 class="page">용어 검색</h1><p class="lead">이름, 한자, 다른 이름, 설명에서 찾아요.</p>`}
-    ${q ? (res.length ? termList(res, q) : `<div class="empty-state"><b>‘${esc(q)}’에 맞는 용어가 없어요</b><p>표기를 바꿔 보거나(예: 층급받침 ↔ 옥개받침), 용어집에 없는 말이면 튜터에게 물어보세요.</p><a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${q}이(가) 뭐야?`)}">AI 튜터에게 묻기</a></div>`) : idle}`;
+    ${q ? (res.length ? termList(res, q) : noteHits.length ? "" : `<div class="empty-state"><b>‘${esc(q)}’에 맞는 용어가 없어요</b><p>표기를 바꿔 보거나(예: 층급받침 ↔ 옥개받침), 용어집에 없는 말이면 튜터에게 물어보세요.</p><a class="btn" href="#/ai/tutor?q=${encodeURIComponent(`${q}이(가) 뭐야?`)}">AI 튜터에게 묻기</a></div>`) : idle}
+    ${noteHits.length ? `<h2 class="label">내 메모 <span>${noteHits.length}</span></h2>${noteHits.map((n) => noteCardHTML(n, { showTerm: true })).join("")}` : ""}`;
+  hydratePhotos(view);
   bindSearch(view);
   const input = view.querySelector("#q-top");
   input.value = q;
@@ -585,6 +750,7 @@ function pageNotFound() {
 const tabbar = document.querySelector(".tabbar");
 function route() {
   cleanup?.(); cleanup = null;
+  editing = null; releasePhotoURLs();
   const [path, qs] = location.hash.replace(/^#/, "").split("?");
   const params = new URLSearchParams(qs || "");
   const seg = (path || "/").split("/").filter(Boolean).map(decodeURIComponent);
@@ -594,7 +760,7 @@ function route() {
   else if (seg[0] === "c" && seg.length === 3) { pageDiagram(seg[1], seg[2], params.get("sel")); title = subName(seg[1], seg[2]); }
   else if (seg[0] === "t") title = pageTerm(seg[1]) || "";
   else if (seg[0] === "s") { nav = "search"; title = pageSearch(seg[1] || ""); }
-  else if (seg[0] === "fav") { pageFav(); title = "즐겨찾기"; }
+  else if (seg[0] === "me" || seg[0] === "fav") { nav = "me"; const favs = seg[0] === "fav" || params.get("tab") === "favs"; pageMe(favs ? "favs" : "notes"); title = favs ? "즐겨찾기" : "내 기록"; }
   else if (seg[0] === "ai" && seg[1] === "tag") { nav = "tag"; pageTag(); title = "사진으로 용어 찾기"; }
   else if (seg[0] === "ai" && seg[1] === "tutor") { nav = "tutor"; pageTutor(params.get("q")); title = "AI 용어 튜터"; }
   else pageNotFound();
