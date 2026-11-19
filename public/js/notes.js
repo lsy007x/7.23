@@ -20,6 +20,18 @@ export const allNotes = () => readNotes().filter((n) => TERM_BY_ID[n.term]).sort
 export const notesOf = (termId) => allNotes().filter((n) => n.term === termId);
 export const searchNotes = (q) => { const s = String(q).trim().toLowerCase(); return s ? allNotes().filter((n) => n.text.toLowerCase().includes(s)) : []; };
 
+// 즐겨찾기와 메모를 잇는 현황: 용어마다 메모·분류·최근 메모를 보여 주고,
+// '확인함'을 붙인 메모가 하나라도 있으면 그 용어는 확인한 것으로 센다(답사 전에 담은 목록의 진행 상황)
+export function favStatus(favIds) {
+  const byTerm = new Map();
+  for (const n of allNotes()) { if (!byTerm.has(n.term)) byTerm.set(n.term, []); byTerm.get(n.term).push(n); }
+  const rows = favIds.filter((id) => TERM_BY_ID[id]).map((id) => {
+    const notes = byTerm.get(id) ?? [], tags = new Set(notes.map((n) => n.tag).filter(Boolean));
+    return { id, notes, tags, checked: tags.has("확인함"), latest: notes[0] ?? null };
+  });
+  return { rows, total: rows.length, checked: rows.filter((r) => r.checked).length };
+}
+
 // id가 있으면 고치고 없으면 새로 만든다. 저장하지 못하면 null
 export function saveNote({ id, term, text, tag, photos }) {
   const list = readNotes(), now = Date.now();
@@ -153,8 +165,10 @@ export async function importBackup(text) {
 }
 
 // 답사 노트: 날짜별 → 용어별로 정의와 내 메모·사진을 묶은, 어디서나 열리는 한 장짜리 HTML 문서
-export async function buildNoteHTML() {
+export async function buildNoteHTML(favIds = []) {
   const notes = allNotes(), photos = await photoData(notes), author = authorName();
+  const fav = favStatus(favIds), todo = fav.rows.filter((r) => !r.checked).map((r) => esc(TERM_BY_ID[r.id].name));
+  const checklist = fav.total ? `<section><h2>답사 전에 챙긴 용어</h2><p>${fav.total}개 중 ${fav.checked}개를 확인했어요.</p>${todo.length ? `<p class="her">아직 확인 전: ${todo.join(", ")}</p>` : ""}</section>` : "";
   const body = groupByDay(notes).map((g) => {
     const byTerm = new Map();
     for (const n of [...g.notes].reverse()) { if (!byTerm.has(n.term)) byTerm.set(n.term, []); byTerm.get(n.term).push(n); }
@@ -168,5 +182,5 @@ ${list.map((n) => `<div class="note">${n.tag ? `<b>${esc(n.tag)}</b> ` : ""}${n.
   }).join("");
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>답사 노트</title>
 <style>body{font:16px/1.7 system-ui,sans-serif;max-width:720px;margin:0 auto;padding:24px 16px;color:#12151a}h1{font-size:1.6rem}h2{margin-top:2rem;border-bottom:1px solid #ccc;padding-bottom:.3rem}h3{margin:1.4rem 0 .2rem;font-size:1.2rem}h3 small{color:#555;font-weight:400}.short{margin:0;font-weight:600;color:#555}.def{margin:.3rem 0}.her{margin:.3rem 0;color:#555;font-size:.9rem}.note{margin:.8rem 0;padding:.6rem .9rem;background:#f5f6f8;border-radius:10px}.note b{margin-right:.4rem}.note span{color:#666;font-size:.85rem}.note p{margin:.3rem 0 0}.note img{display:block;max-width:100%;margin-top:.6rem;border-radius:8px}footer{margin-top:3rem;color:#666;font-size:.85rem}@media print{.note{break-inside:avoid}}</style></head>
-<body><h1>답사 노트</h1>${author ? `<p>작성 ${esc(author)}</p>` : ""}${body || "<p>아직 메모가 없어요.</p>"}<footer>TAMSAEK-H에서 만든 답사 노트예요. 정의의 출처는 앱의 용어 화면에서 확인할 수 있어요.</footer></body></html>`;
+<body><h1>답사 노트</h1>${author ? `<p>작성 ${esc(author)}</p>` : ""}${checklist}${body || "<p>아직 메모가 없어요.</p>"}<footer>TAMSAEK-H에서 만든 답사 노트예요. 정의의 출처는 앱의 용어 화면에서 확인할 수 있어요.</footer></body></html>`;
 }

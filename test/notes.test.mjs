@@ -84,3 +84,27 @@ test("답사 노트 HTML: 메모의 태그·스크립트는 글자로만 나온�
   assert.ok(html.includes("&lt;b&gt;나&lt;/b&gt;"));
   assert.ok(html.includes(TERMS[0].name));
 });
+
+test("즐겨찾기 현황: 확인함 메모가 있으면 확인한 것으로 센다", () => {
+  reset();
+  const [a, b, c] = [TERMS[0].id, TERMS[1].id, TERMS[2].id];
+  N.saveNote({ term: a, text: "봤음", tag: "확인함", photos: [] });
+  N.saveNote({ term: b, text: "다시", tag: "다시 볼 것", photos: [] });
+  N.saveNote({ term: a, text: "또", tag: "질문", photos: [] });
+  const st = N.favStatus([a, b, c, "nope"]);
+  assert.equal(st.total, 3); assert.equal(st.checked, 1);
+  const ra = st.rows.find((r) => r.id === a);
+  assert.equal(ra.notes.length, 2); assert.ok(ra.checked); assert.ok(ra.tags.has("질문"));
+  assert.equal(st.rows.find((r) => r.id === c).latest, null);
+  assert.ok(!st.rows.find((r) => r.id === b).checked);
+});
+
+test("답사 노트 HTML: 즐겨찾기 진행 상황과 아직 확인 전인 용어가 들어간다", async () => {
+  reset();
+  const [a, b] = [TERMS[0].id, TERMS[1].id];
+  N.saveNote({ term: a, text: "봤음", tag: "확인함", photos: [] });
+  const html = await N.buildNoteHTML([a, b]);
+  assert.ok(html.includes("2개 중 1개를 확인했어요"));
+  assert.ok(html.includes(`아직 확인 전: ${TERMS[1].name}`));
+  assert.ok(!(await N.buildNoteHTML([])).includes("답사 전에 챙긴 용어"));
+});

@@ -5,7 +5,7 @@ import { renderFigure, mountFigure, figureTermIds } from "./figview.js";
 import { IDS_3D } from "./model3d.js";
 import { FIGURES } from "./figures.js";
 import { STRUCTURES, STRUCT_BY_KEY, DEFAULT_STRUCT, termIdOf } from "./structures.js";
-import { TAGS, MAX_PHOTOS_PER_NOTE, allNotes, notesOf, searchNotes, saveNote, deleteNote, addPhoto, removePhoto, photoURL, releasePhotoURLs,
+import { TAGS, MAX_PHOTOS_PER_NOTE, favStatus, allNotes, notesOf, searchNotes, saveNote, deleteNote, addPhoto, removePhoto, photoURL, releasePhotoURLs,
   authorName, setAuthorName, groupByDay, timeLabel, buildBackup, importBackup, buildNoteHTML } from "./notes.js";
 
 const view = document.getElementById("view");
@@ -157,6 +157,7 @@ function editorHTML(n, termId) {
     <label class="sr-only" for="${id}">메모</label>
     <textarea id="${id}" name="text" rows="4" maxlength="2000" placeholder="현장에서 본 것, 궁금한 점을 적어 두세요">${esc(n?.text ?? "")}</textarea>
     <div class="memo-tags" role="group" aria-label="분류">${TAGS.map((t) => `<button type="button" class="chip tagchip" data-tag="${t}" aria-pressed="${t === tag}">${t}</button>`).join("")}</div>
+    <label class="check"><input type="checkbox" name="fav"${store.get("favs").includes(termId) ? " checked" : ""} />즐겨찾기에도 담기</label>
     <div class="memo-photos" data-photos>${(n?.photos ?? []).map((p) => photoThumb(p)).join("")}</div>
     <div class="memo-up"><label class="btn">사진 찍기<input type="file" accept="image/*" capture="environment" data-addphoto /></label><label class="btn">앨범에서<input type="file" accept="image/*" multiple data-addphoto /></label></div>
     <div class="memo-btns"><button type="submit" class="btn primary">저장</button><button type="button" class="btn" data-cancel>취소</button></div>
@@ -210,6 +211,11 @@ async function submitEditor(form) {
   const note = saveNote({ id, term: form.dataset.term, text, tag: form.querySelector('[data-tag][aria-pressed="true"]')?.dataset.tag ?? "", photos: pids });
   if (!note) return showErr(form, "저장하지 못했어요. 브라우저 저장 공간이 막혀 있거나 가득 찼을 수 있어요.");
   for (const p of prev?.photos ?? []) if (!pids.includes(p)) await removePhoto(p).catch(() => {});
+  const term = form.dataset.term;
+  if (form.elements.fav.checked !== store.get("favs").includes(term)) {
+    const on = store.toggle("favs", term);
+    view.querySelectorAll(`[data-fav="${term}"]`).forEach((x) => x.setAttribute("aria-pressed", on));
+  }
   editing = null; refreshMemos();
 }
 async function addPhotosTo(input) {
@@ -240,7 +246,7 @@ async function runExport(kind, btn) {
   const out = view.querySelector("#share-msg");
   btn.disabled = true; out.hidden = false; out.className = "notice"; out.textContent = "파일을 만드는 중…";
   try {
-    out.textContent = kind === "html" ? await deliver(`답사노트-${today()}.html`, "text/html", await buildNoteHTML())
+    out.textContent = kind === "html" ? await deliver(`답사노트-${today()}.html`, "text/html", await buildNoteHTML(store.get("favs")))
       : await deliver(`tamsaek-백업-${today()}.json`, "application/json", await buildBackup());
   } catch { out.className = "notice err"; out.textContent = "파일을 만들지 못했어요. 사진이 많으면 한 번에 만들기 어려울 수 있어요."; }
   btn.disabled = false;
@@ -266,6 +272,7 @@ view.addEventListener("click", (e) => {
   else if ((el = q("[data-photo-remove]"))) { const m = el.closest(".mphoto"); if (m.hasAttribute("data-new")) removePhoto(m.dataset.pid).catch(() => {}); m.remove(); }
   else if ((el = q("[data-cancel]"))) closeEditor(el.closest("[data-editor]"), { discardNew: true });
   else if ((el = q("[data-export]"))) runExport(el.dataset.export, el);
+  else if ((el = q("[data-favfilter]"))) { favFilter = el.dataset.favfilter; renderFavBoard(); }
 });
 view.addEventListener("submit", (e) => { const f = e.target.closest("[data-editor]"); if (f) { e.preventDefault(); submitEditor(f); } });
 view.addEventListener("change", (e) => {
@@ -284,8 +291,8 @@ function pageMe(tab = "notes") {
       <a href="#/me?tab=favs"${tab === "favs" ? ' class="on" aria-current="page"' : ""}>즐겨찾기 ${f.length}</a>
     </nav>
     ${tab === "favs"
-      ? (f.length ? `<p class="lead">이 기기에만 저장돼요. 용어 화면의 별을 다시 누르면 빠져요.</p>${termList(f)}`
-        : `<div class="empty-state"><b>아직 즐겨찾기한 용어가 없어요</b><p>용어 이름 옆의 별을 누르면 여기에 모여요. 답사 전에 볼 용어를 담아 두세요.</p><a class="btn primary" href="#/s/">용어 찾아보기</a></div>`)
+      ? (f.length ? `<div id="fav-board"></div>`
+        : `<div class="empty-state"><b>아직 즐겨찾기한 용어가 없어요</b><p>용어 이름 옆의 별을 누르면 여기에 모여요. 답사 전에 볼 용어를 담아 두고, 현장에서 메모에 ‘확인함’을 붙이면 체크돼요.</p><a class="btn primary" href="#/s/">용어 찾아보기</a></div>`)
       : `<div class="author"><label for="me-name">내 이름</label><input id="me-name" type="text" maxlength="20" value="${esc(authorName())}" placeholder="조원에게 보낼 때 표시돼요 (선택)" autocomplete="off" /></div>
     <div id="memo-list"></div>
     <section class="share">
@@ -300,6 +307,27 @@ function pageMe(tab = "notes") {
     </section>`}`;
   bindSearch(view);
   renderMemoList();
+  renderFavBoard();
+}
+// 즐겨찾기 = 답사 전에 챙길 용어 목록. 메모와 이어서 확인한 것·다시 볼 것·질문을 보여 준다
+let favFilter = "all";
+const FAV_FILTERS = [
+  ["all", "전체", () => true], ["todo", "확인 전", (r) => !r.checked], ["again", "다시 볼 것", (r) => r.tags.has("다시 볼 것")],
+  ["ask", "질문", (r) => r.tags.has("질문")], ["done", "확인함", (r) => r.checked],
+];
+function renderFavBoard() {
+  const box = view.querySelector("#fav-board");
+  if (!box) return;
+  const st = favStatus(store.get("favs")), pct = st.total ? Math.round((st.checked / st.total) * 100) : 0;
+  const rows = st.rows.filter((r) => FAV_FILTERS.find((x) => x[0] === favFilter)[2](r));
+  box.innerHTML = `<div class="progress"><p><b>${st.total}개 중 ${st.checked}개 확인</b></p><div class="bar" role="img" aria-label="확인한 용어 ${pct}%"><i style="width:${pct}%"></i></div>
+      <p class="lead">현장에서 메모에 ‘확인함’을 붙이면 확인한 것으로 세요. 이 기기에만 저장돼요.</p></div>
+    <div class="filters" role="group" aria-label="걸러 보기">${FAV_FILTERS.map(([k, name, fn]) => `<button type="button" class="chip filterchip" data-favfilter="${k}" aria-pressed="${k === favFilter}">${name} ${st.rows.filter(fn).length}</button>`).join("")}</div>
+    ${rows.length ? `<ul class="term-list">${rows.map((r) => {
+      const t = TERM_BY_ID[r.id], n = r.notes.find((x) => x.text) ?? r.latest;
+      return `<li class="c-${t.cat}"><a href="#/t/${t.id}"><div><b>${esc(t.name)}</b>${hanjaSpan(t)}<p>${esc(t.short)}</p>
+        <p class="fav-memo">${r.latest ? `${r.latest.tag ? `<span class="note-tag t${TAGS.indexOf(r.latest.tag)}">${esc(r.latest.tag)}</span>` : ""}<span class="snip">${esc(n?.text ? n.text.replace(/\s+/g, " ").slice(0, 60) : "사진 메모")}</span>${r.notes.length > 1 ? `<span class="note-meta">외 ${r.notes.length - 1}개</span>` : ""}` : `<span class="snip none">메모 없음</span>`}</p></div>${CHEVRON}</a></li>`;
+    }).join("")}</ul>` : `<p class="placeholder">이 조건에 맞는 용어가 없어요.</p>`}`;
 }
 function recentRow() {
   const r = recentTerms().slice(0, 8);
@@ -750,7 +778,7 @@ function pageNotFound() {
 const tabbar = document.querySelector(".tabbar");
 function route() {
   cleanup?.(); cleanup = null;
-  editing = null; releasePhotoURLs();
+  editing = null; favFilter = "all"; releasePhotoURLs();
   const [path, qs] = location.hash.replace(/^#/, "").split("?");
   const params = new URLSearchParams(qs || "");
   const seg = (path || "/").split("/").filter(Boolean).map(decodeURIComponent);
